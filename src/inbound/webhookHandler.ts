@@ -1,5 +1,4 @@
 import { prisma } from "../db";
-import { config } from "../config";
 
 /**
  * Traitement des webhooks Meta (WhatsApp / Messenger)
@@ -12,25 +11,90 @@ export async function handleMetaWebhook(payload: any) {
     return;
   }
 
-  for (const entry of payload.entry) {
-    for (const change of entry.changes) {
-      if (change.field === "messages") {
-        const message = change.value.messages?.[0];
-        const senderId = message?.from;
-        if (!senderId) continue;
+  const isWhatsApp = payload.object === "whatsapp_business_account";
 
-        // Log du message reçu
+  for (const entry of payload.entry) {
+    // Cas Messenger (entry.messaging)
+    if (entry.messaging) {
+      for (const msgEvent of entry.messaging) {
+        const senderId = msgEvent.sender?.id;
+        const text = msgEvent.message?.text;
+        if (!senderId || !text) continue;
+
+        // Étape A : Trouver ou créer le Lead via son identifiant Messenger
+        let lead = await prisma.lead.findFirst({
+          where: { messengerPsid: senderId },
+        });
+
+        if (!lead) {
+          lead = await prisma.lead.create({
+            data: {
+              source: "messenger",
+              messengerPsid: senderId,
+              name: `Prospect Messenger ${senderId.slice(-6)}`,
+              status: "new",
+            },
+          });
+          console.log(`[Webhook] Nouveau lead créé via Messenger : ${lead.id}`);
+        }
+
+        // Étape B : Enregistrer le message reçu dans le journal
         await prisma.messageLog.create({
           data: {
-            channel: change.value.metadata?.phone_number_id ? "whatsapp" : "messenger",
-            externalId: senderId,
+            leadId: lead.id,
+            channel: "messenger",
             direction: "inbound",
-            content: message.text?.body || "Non textuel",
+            subject: text.slice(0, 200), // Utilise le texte reçu comme sujet/aperçu
+            status: "received",
+            externalId: senderId,
           },
         });
 
-        // Ici : appeler un service de réponse IA ou de capture de lead
-        console.log(`[Webhook] Message reçu de ${senderId}:`, message.text?.body);
+        console.log(`[Webhook Messenger] Message loggé pour le lead ${lead.id}: "${text}"`);
+      }
+    }
+
+    // Cas WhatsApp (entry.changes)
+    if (entry.changes) {
+      for (const change of entry.changes) {
+        if (change.field === "messages") {
+          const value = change.value;
+          const message = value.messages?.[0];
+          const phone = message?.from;
+          const text = message?.text?.body;
+          if (!phone || !text) continue;
+
+          // Étape A : Trouver ou créer le Lead via son numéro de téléphone
+          let lead = await prisma.lead.findFirst({
+            where: { phone },
+          });
+
+          if (!lead) {
+            lead = await prisma.lead.create({
+              data: {
+                source: "whatsapp",
+                phone,
+                name: value.contacts?.[0]?.profile?.name || `Prospect WhatsApp ${phone.slice(-6)}`,
+                status: "new",
+              },
+            });
+            console.log(`[Webhook] Nouveau lead créé via WhatsApp : ${lead.id}`);
+          }
+
+          // Étape B : Enregistrer le message reçu dans le journal
+          await prisma.messageLog.create({
+            data: {
+              leadId: lead.id,
+              channel: "whatsapp",
+              direction: "inbound",
+              subject: text.slice(0, 200),
+              status: "received",
+              externalId: message.id || phone,
+            },
+          });
+
+          console.log(`[Webhook WhatsApp] Message loggé pour le lead ${lead.id}: "${text}"`);
+        }
       }
     }
   }
@@ -40,6 +104,5 @@ export async function handleMetaWebhook(payload: any) {
  * Traitement des webhooks TikTok
  */
 export async function handleTikTokWebhook(payload: any) {
-  // TikTok nécessite une vérification de signature HMAC (si nécessaire)
   console.log("[Webhook] Événement TikTok reçu:", JSON.stringify(payload));
 }
