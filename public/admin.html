@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Conrad Grand Luxury Hotel — Agent Marketing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --navy-950:#070F1C; --navy-900:#0B1626; --navy-800:#12233D;
+    --gold-500:#C9A25E; --gold-400:#D9B36A; --gold-300:#EAD9AE;
+    --ivory:#F7F3EB; --card:#FFFFFF; --ink:#1A2433; --muted:#8A93A3; --line:#E9E2D4;
+    --ok:#1E7A46; --err:#B3382C; --warn:#B7791F;
+    --shadow: 0 1px 2px rgba(7,15,28,.05), 0 10px 30px rgba(7,15,28,.07);
+    --shadow-lg: 0 24px 70px rgba(7,15,28,.18);
+    --sans:'Inter',-apple-system,'Segoe UI',sans-serif;
+    --serif:'Playfair Display',Georgia,serif;
+    --r-sm:8px; --r-md:12px; --r-lg:18px; --r-xl:24px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html { scroll-behavior:smooth; }
+  body { font-family:var(--sans); background:var(--ivory); color:var(--ink); font-size:.95rem; line-height:1.55; }
+
+  ::-webkit-scrollbar { width:9px; height:9px; }
+  ::-webkit-scrollbar-thumb { background:#D5CCB9; border-radius:8px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+
+  /* ── Layout ── */
+  .layout { display:flex; min-height:100vh; }
+  .sidebar { width:248px; background:linear-gradient(180deg,var(--navy-950),var(--navy-900)); color:#93A0B4; display:flex; flex-direction:column; position:fixed; inset:0 auto 0 0; z-index:20; }
+  .brand { display:flex; align-items:center; gap:12px; padding:24px 20px 20px; border-bottom:1px solid #ffffff12; }
+  .monogram { width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg,var(--gold-400),var(--gold-500)); color:var(--navy-950); display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-size:1.4rem; font-weight:700; box-shadow:0 4px 14px #C9A25E44; }
+  .brand-name { color:#F3EDE2; font-family:var(--serif); font-size:1.05rem; font-weight:600; letter-spacing:.02em; line-height:1.2; }
+  .brand-sub { font-size:.68rem; letter-spacing:.14em; text-transform:uppercase; color:#7E8BA0; margin-top:2px; }
+  .nav { flex:1; padding:14px 12px; display:flex; flex-direction:column; gap:2px; overflow-y:auto; }
+  .nav button { display:flex; align-items:center; gap:12px; width:100%; padding:11px 14px; background:none; border:none; border-radius:var(--r-md); color:#93A0B4; font-family:var(--sans); font-size:.9rem; font-weight:500; cursor:pointer; text-align:left; position:relative; transition:background .18s,color .18s; }
+  .nav button svg { width:19px; height:19px; flex-shrink:0; }
+  .nav button:hover { background:#ffffff0d; color:#E8E3D8; }
+  .nav button.active { background:linear-gradient(90deg,var(--navy-800),#0E1D33); color:var(--gold-300); font-weight:600; }
+  .nav button.active::before { content:""; position:absolute; left:0; top:9px; bottom:9px; width:3px; border-radius:3px; background:linear-gradient(180deg,var(--gold-400),var(--gold-500)); }
+  .sidebar-foot { padding:16px 20px; border-top:1px solid #ffffff12; font-size:.75rem; color:#7E8BA0; }
+  .mode-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; background:var(--gold-400); box-shadow:0 0 8px var(--gold-400); }
+  .mode-dot.prod { background:#3FBF7F; box-shadow:0 0 8px #3FBF7F; }
+
+  .main { flex:1; margin-left:248px; display:flex; flex-direction:column; min-width:0; }
+  .topbar { display:flex; align-items:center; gap:16px; padding:20px 32px 0; }
+  .topbar h1 { font-family:var(--serif); font-size:1.7rem; font-weight:600; color:var(--navy-900); }
+  .topbar .sub { color:var(--muted); font-size:.82rem; margin-top:2px; }
+  .topbar .spacer { flex:1; }
+  .pill { display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:999px; background:var(--card); border:1px solid var(--line); font-size:.8rem; font-weight:600; color:var(--navy-900); box-shadow:var(--shadow); cursor:pointer; transition:transform .15s, box-shadow .15s; }
+  .pill:hover { transform:translateY(-1px); box-shadow:var(--shadow-lg); }
+  .content { padding:24px 32px 60px; max-width:1280px; width:100%; }
+
+  /* ── Sections & cartes ── */
+  .tab { display:none; }
+  .tab.active { display:block; animation:fadeUp .35s cubic-bezier(.2,.7,.3,1); }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+  .panel { background:var(--card); border-radius:var(--r-lg); box-shadow:var(--shadow); padding:22px 24px; margin-bottom:20px; }
+  .panel h2 { font-family:var(--serif); font-size:1.25rem; font-weight:600; color:var(--navy-900); margin-bottom:4px; }
+  .panel .desc { color:var(--muted); font-size:.84rem; margin-bottom:16px; }
+  .section-head { display:flex; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+
+  /* ── KPI ── */
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:16px; margin-bottom:20px; }
+  .kpi { background:var(--card); border-radius:var(--r-lg); box-shadow:var(--shadow); padding:20px 22px; position:relative; overflow:hidden; transition:transform .18s, box-shadow .18s; }
+  .kpi:hover { transform:translateY(-3px); box-shadow:var(--shadow-lg); }
+  .kpi::after { content:""; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--gold-500),var(--gold-300)); opacity:0; transition:opacity .2s; }
+  .kpi:hover::after { opacity:1; }
+  .kpi .num { font-family:var(--serif); font-size:2.1rem; font-weight:700; color:var(--navy-900); line-height:1.1; }
+  .kpi .lbl { font-size:.74rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-top:6px; font-weight:600; }
+  .kpi .sub { font-size:.8rem; color:var(--muted); margin-top:4px; }
+
+  /* ── Funnel ── */
+  .funnel { display:flex; flex-direction:column; gap:8px; }
+  .funnel .row { display:flex; align-items:center; gap:12px; }
+  .funnel .lbl { width:130px; font-size:.8rem; color:var(--muted); text-align:right; flex-shrink:0; }
+  .funnel .bar { height:30px; border-radius:8px; background:linear-gradient(90deg,var(--navy-800),var(--gold-500)); color:#fff; display:flex; align-items:center; padding:0 12px; font-size:.82rem; font-weight:600; min-width:34px; transition:width .6s cubic-bezier(.2,.7,.3,1); }
+  .funnel .bar.gold { background:linear-gradient(90deg,var(--gold-500),var(--gold-300)); color:var(--navy-950); }
+
+  /* ── Formulaires ── */
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; align-items:end; }
+  .field { display:flex; flex-direction:column; gap:6px; }
+  .field label { font-size:.74rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+  .field input, .field select, .field textarea { padding:11px 13px; border:1.5px solid var(--line); border-radius:var(--r-md); font-family:var(--sans); font-size:.92rem; background:#FFFEFA; color:var(--ink); transition:border-color .15s, box-shadow .15s; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline:none; border-color:var(--gold-500); box-shadow:0 0 0 3px #C9A25E26; }
+  .check { display:flex; align-items:center; gap:9px; font-size:.86rem; color:var(--ink); padding:8px 0; }
+  .check input { accent-color:var(--gold-500); width:17px; height:17px; }
+
+  /* ── Boutons ── */
+  .btn { display:inline-flex; align-items:center; gap:8px; padding:11px 18px; border-radius:var(--r-sm); border:none; font-family:var(--sans); font-size:.88rem; font-weight:600; cursor:pointer; transition:transform .15s, box-shadow .15s, filter .15s; }
+  .btn:active { transform:scale(.97); }
+  .btn.primary { background:linear-gradient(135deg,var(--gold-400),var(--gold-500)); color:var(--navy-950); box-shadow:0 4px 14px #C9A25E40; }
+  .btn.primary:hover { filter:brightness(1.06); box-shadow:0 6px 18px #C9A25E55; }
+  .btn.dark { background:var(--navy-900); color:#F3EDE2; }
+  .btn.dark:hover { background:var(--navy-800); }
+  .btn.ghost { background:transparent; color:var(--navy-900); border:1.5px solid var(--line); }
+  .btn.ghost:hover { border-color:var(--gold-500); color:var(--gold-500); background:#C9A25E0D; }
+  .btn.danger { background:#FBEAE8; color:var(--err); }
+  .btn.danger:hover { background:#F6D9D6; }
+  .btn.small { padding:7px 12px; font-size:.78rem; }
+  .btn:disabled { opacity:.55; cursor:not-allowed; }
+
+  /* ── Tableaux ── */
+  .tbl-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:.88rem; }
+  thead th { text-align:left; padding:10px 14px; font-size:.7rem; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); font-weight:600; border-bottom:1.5px solid var(--line); white-space:nowrap; }
+  tbody td { padding:13px 14px; border-bottom:1px solid #F0EADC; vertical-align:middle; }
+  tbody tr { transition:background .12s; }
+  tbody tr:hover { background:#FBF7EE; }
+  tbody tr:last-child td { border-bottom:none; }
+
+  /* ── Badges ── */
+  .badge { display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border-radius:999px; font-size:.74rem; font-weight:600; background:#EEF0F4; color:#4A5568; white-space:nowrap; }
+  .badge::before { content:""; width:7px; height:7px; border-radius:50%; background:#94A3B8; }
+  .badge.ok { background:#E3F3E9; color:var(--ok); } .badge.ok::before { background:var(--ok); }
+  .badge.warn { background:#FBF1DD; color:var(--warn); } .badge.warn::before { background:var(--warn); }
+  .badge.err { background:#FBEAE8; color:var(--err); } .badge.err::before { background:var(--err); }
+  .badge.gold { background:#F5ECDA; color:#8A6A2A; } .badge.gold::before { background:var(--gold-500); }
+
+  /* ── Médiathèque ── */
+  .media-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:14px; }
+  .media-item { background:#FBF8F1; border:1px solid var(--line); border-radius:var(--r-md); overflow:hidden; cursor:zoom-in; transition:transform .18s, box-shadow .18s; }
+  .media-item:hover { transform:translateY(-3px); box-shadow:var(--shadow-lg); }
+  .media-item .thumb { aspect-ratio:4/3; width:100%; object-fit:cover; display:block; background:#EFE9DC; }
+  .media-item .meta { padding:9px 12px; font-size:.72rem; color:var(--muted); display:flex; justify-content:space-between; align-items:center; }
+
+  /* ── Pipeline leads ── */
+  .pipeline { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; }
+  .pcol { background:#F8F4EA; border-radius:var(--r-md); padding:12px; min-height:180px; }
+  .pcol h3 { font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
+  .pcol h3 .count { background:var(--card); border:1px solid var(--line); border-radius:999px; padding:1px 9px; font-size:.7rem; }
+  .lcard { background:var(--card); border-radius:var(--r-sm); padding:12px 13px; margin-bottom:9px; box-shadow:0 1px 3px rgba(7,15,28,.07); transition:transform .15s, box-shadow .15s; }
+  .lcard:hover { transform:translateY(-2px); box-shadow:var(--shadow-lg); }
+  .lcard .name { font-weight:600; font-size:.88rem; color:var(--navy-900); }
+  .lcard .contact { font-size:.76rem; color:var(--muted); margin:2px 0 8px; word-break:break-all; }
+  .lcard .row { display:flex; gap:6px; flex-wrap:wrap; }
+
+  /* ── Modales ── */
+  .modal { display:none; position:fixed; inset:0; background:#070F1C99; backdrop-filter:blur(6px); z-index:50; align-items:center; justify-content:center; padding:24px; }
+  .modal.open { display:flex; }
+  .modal-card { background:var(--card); border-radius:var(--r-xl); box-shadow:var(--shadow-lg); width:min(560px,94vw); max-height:88vh; overflow-y:auto; animation:modalIn .28s cubic-bezier(.2,.8,.3,1); padding:28px 30px; }
+  .modal-card.wide { width:min(900px,94vw); }
+  @keyframes modalIn { from { opacity:0; transform:translateY(18px) scale(.98); } to { opacity:1; transform:none; } }
+  .modal-card h2 { font-family:var(--serif); font-size:1.4rem; font-weight:600; color:var(--navy-900); margin-bottom:4px; }
+  .modal-card .desc { color:var(--muted); font-size:.84rem; margin-bottom:20px; }
+  .modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:22px; }
+  .modal-close { position:sticky; top:0; float:right; background:none; border:none; font-size:1.4rem; color:var(--muted); cursor:pointer; margin:-8px -10px 0 0; }
+
+  /* ── Toasts ── */
+  #toasts { position:fixed; right:22px; bottom:22px; display:flex; flex-direction:column; gap:10px; z-index:90; }
+  .toast { background:var(--navy-900); color:#F3EDE2; padding:13px 18px; border-radius:var(--r-md); box-shadow:var(--shadow-lg); font-size:.86rem; display:flex; align-items:center; gap:10px; animation:toastIn .3s cubic-bezier(.2,.8,.3,1); max-width:380px; }
+  .toast::before { content:""; width:9px; height:9px; border-radius:50%; background:var(--gold-400); flex-shrink:0; }
+  .toast.ok::before { background:#3FBF7F; }
+  .toast.err::before { background:#E0524A; }
+  @keyframes toastIn { from { opacity:0; transform:translateX(24px); } to { opacity:1; transform:none; } }
+
+  /* ── Aperçus ── */
+  .phone { width:290px; height:600px; background:#000; border-radius:36px; border:9px solid #1A2433; position:relative; overflow:hidden; box-shadow:0 34px 90px #000A; flex-shrink:0; }
+  .phone .stage { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+  .phone video, .phone img { width:100%; height:100%; object-fit:cover; }
+  .phone .caption { position:absolute; left:0; right:0; bottom:0; padding:14px 13px 22px; color:#fff; font-size:.78rem; background:linear-gradient(transparent,#000D); max-height:46%; overflow:auto; white-space:pre-wrap; }
+  .fb-card { width:440px; max-width:94vw; background:var(--card); border-radius:14px; overflow:hidden; color:var(--ink); text-align:left; box-shadow:0 34px 90px #000A; }
+  .fb-card .head { display:flex; gap:10px; padding:13px 15px; align-items:center; font-weight:600; }
+  .fb-card .avatar { width:42px; height:42px; border-radius:50%; background:var(--navy-900); color:var(--gold-300); display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-size:1.15rem; }
+  .fb-card .text { padding:0 15px 11px; white-space:pre-wrap; font-size:.93rem; }
+  .fb-card img { width:100%; max-height:340px; object-fit:cover; display:block; }
+  .fb-card .actions { display:flex; gap:16px; padding:11px 15px; color:var(--muted); font-size:.84rem; border-top:1px solid var(--line); }
+  .preview-wrap { display:flex; gap:26px; align-items:center; justify-content:center; flex-wrap:wrap; padding:8px 0; }
+
+  /* ── Divers ── */
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .muted { color:var(--muted); font-size:.84rem; }
+  .empty { text-align:center; padding:44px 20px; color:var(--muted); }
+  .empty .big { font-size:2.2rem; margin-bottom:8px; }
+  .search { position:relative; }
+  .search input { padding:10px 13px 10px 38px; border:1.5px solid var(--line); border-radius:var(--r-md); font-size:.88rem; background:#FFFEFA; min-width:220px; }
+  .search svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); width:16px; height:16px; color:var(--muted); }
+  .dropzone { border:2px dashed var(--line); border-radius:var(--r-lg); padding:34px 20px; text-align:center; cursor:pointer; transition:border-color .2s, background .2s; background:#FFFEFA; }
+  .dropzone:hover, .dropzone.drag { border-color:var(--gold-500); background:#FBF6EC; }
+  .chip { display:inline-flex; align-items:center; gap:7px; padding:7px 14px; border-radius:999px; background:var(--card); border:1.5px solid var(--line); font-size:.8rem; font-weight:600; color:var(--navy-900); cursor:pointer; transition:all .15s; }
+  .chip:hover { border-color:var(--gold-500); }
+  .chip.active { background:linear-gradient(135deg,var(--gold-400),var(--gold-500)); color:var(--navy-950); border-color:transparent; }
+  .tag { display:inline-block; background:#F5ECDA; color:#8A6A2A; border-radius:6px; padding:1px 8px; font-size:.68rem; margin:2px 3px 0 0; }
+  .skeleton { border-radius:var(--r-md); background:linear-gradient(90deg,#EFE9DC 25%,#F8F4EA 37%,#EFE9DC 63%); background-size:400% 100%; animation:shimmer 1.2s infinite; height:60px; margin-bottom:12px; }
+  @keyframes shimmer { 0% { background-position:100% 0; } 100% { background-position:-100% 0; } }
+  .kbd { border:1px solid var(--line); border-radius:5px; padding:1px 7px; font-size:.72rem; background:#FBF8F1; color:var(--muted); }
+
+  @media (max-width:860px) {
+    .sidebar { width:64px; }
+    .brand-name, .brand-sub, .nav button span, .sidebar-foot span { display:none; }
+    .brand { justify-content:center; padding:16px 0; }
+    .nav button { justify-content:center; padding:12px; }
+    .main { margin-left:64px; }
+    .content, .topbar { padding-left:16px; padding-right:16px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="monogram">C</div>
+      <div>
+        <div class="brand-name">Conrad</div>
+        <div class="brand-sub">Grand Luxury Hotel</div>
+      </div>
+    </div>
+    <nav class="nav" id="nav">
+      <button data-tab="overview" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Vue d'ensemble</span></button>
+      <button data-tab="campaigns"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 21V4a1 1 0 0 1 1-1h7.6a1 1 0 0 1 .7.3L19 8a1 1 0 0 1 .3.7V21"/><path d="M15 3v5h5"/><path d="M9 12h6M9 16h6"/></svg><span>Campagnes</span></button>
+      <button data-tab="posts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-8 8H4l2.5-2.5A8 8 0 1 1 21 12Z"/><path d="M8 11h8M8 15h5"/></svg><span>Posts</span></button>
+      <button data-tab="calendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 15l2 2 4-4"/></svg><span>Calendrier</span></button>
+      <button data-tab="media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M3 17l5.5-5 4 3.5L16 12l5 4.5"/></svg><span>Médiathèque</span></button>
+      <button data-tab="leads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><circle cx="17.5" cy="9.5" r="2.3"/><path d="M16 15.2a4.4 4.4 0 0 1 4.9 4.6"/></svg><span>Leads</span></button>
+      <button data-tab="bookings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Réservations</span></button>
+      <button data-tab="ads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11v3a1 1 0 0 0 1 1h2.5L15 19V5L6.5 9H4a1 1 0 0 0-1 1Z"/><path d="M18 9a4.5 4.5 0 0 1 0 6"/></svg><span>Annonces</span></button>
+      <button data-tab="integrations"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3v6M15 3v6M6 9h12v3a6 6 0 0 1-12 0V9Z"/><path d="M12 18v3"/></svg><span>Intégrations</span></button>
+    </nav>
+    <div class="sidebar-foot"><span class="mode-dot" id="modeDot"></span><span id="modeLabel">chargement…</span></div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <h1 id="pageTitle">Vue d'ensemble</h1>
+        <div class="sub" id="pageSub">Pilotage marketing du Conrad Grand Luxury Hotel</div>
+      </div>
+      <div class="spacer"></div>
+      <button class="pill" id="keyBtn">🔑 Clé API</button>
+    </header>
+
+    <div class="content">
+      <!-- Vue d'ensemble -->
+      <section id="tab-overview" class="tab active">
+        <div class="kpis" id="kpis"></div>
+        <div class="panel">
+          <h2>Entonnoir de conversion</h2>
+          <div class="desc">Du premier contact à la réservation</div>
+          <div class="funnel" id="funnel"></div>
+        </div>
+        <div class="panel">
+          <h2>Actions rapides</h2>
+          <div class="row" style="margin-top:6px">
+            <button class="btn primary" id="qaCampaign">+ Nouvelle campagne</button>
+            <button class="btn ghost" onclick="switchTab('media')">📸 Collecter les médias du site</button>
+            <button class="btn ghost" id="qaNurture">💬 Lancer le nurturing</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Campagnes -->
+      <section id="tab-campaigns" class="tab">
+        <div class="panel">
+          <div class="section-head"><h2>Campagnes</h2><div class="spacer" style="flex:1"></div><button class="btn primary" id="newCampaignBtn">+ Nouvelle campagne</button></div>
+          <div class="tbl-wrap"><table id="campaignsTable"><thead><tr><th>Campagne</th><th>Objectif</th><th>Statut</th><th>Budget</th><th>Posts</th><th>Leads</th><th>Réservations</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- Posts -->
+      <section id="tab-posts" class="tab">
+        <div class="panel">
+          <div class="section-head">
+            <h2>Posts</h2>
+            <div class="spacer" style="flex:1"></div>
+            <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="postSearch" placeholder="Rechercher…"/></div>
+            <select id="postFilter" style="padding:10px 13px;border:1.5px solid var(--line);border-radius:var(--r-md);background:#FFFEFA;font-size:.88rem">
+              <option value="">Tous les statuts</option>
+              <option value="draft">Brouillon</option><option value="ready">Prêt</option>
+              <option value="scheduled">Planifié</option><option value="published">Publié</option>
+            </select>
+            <button class="btn dark" id="runScheduled">▶ Publier les planifiés</button>
+          </div>
+          <div class="tbl-wrap"><table id="postsTable"><thead><tr><th>Plateforme</th><th>Contenu</th><th>Statut</th><th>Planifié</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- Calendrier -->
+      <section id="tab-calendar" class="tab">
+        <div class="kpis" id="styleCards"></div>
+        <div class="panel">
+          <div class="section-head">
+            <h2>Semaine type</h2>
+            <div class="spacer" style="flex:1"></div>
+            <button class="btn ghost" id="addSlotBtn">+ Créneau</button>
+            <button class="btn primary" id="genWeekBtn">✨ Générer les posts de la semaine</button>
+          </div>
+          <div class="desc">L'agent crée automatiquement les posts planifiés (textes adaptés + médias de la médiathèque) pour chaque créneau.</div>
+          <div class="tbl-wrap"><table id="calendarTable"><thead><tr><th>Plateforme</th><th>Jour</th><th>Heure</th><th>Type</th><th>Thème</th><th>Ton</th><th></th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- Médias -->
+      <section id="tab-media" class="tab">
+        <div class="panel">
+          <h2>Ajouter des médias</h2>
+          <div class="desc">Taguez et catégorisez vos visuels : l'agent les repère automatiquement pour créer ses posts.</div>
+          <div id="dropZone" class="dropzone">
+            <div class="big" style="font-size:1.8rem">📁</div>
+            <div style="font-weight:600;color:var(--navy-900)">Glissez un fichier ici</div>
+            <div class="muted">ou cliquez pour choisir — image ou vidéo</div>
+            <input type="file" id="uploadFile" accept="image/*,video/*" hidden/>
+          </div>
+          <div class="grid" style="margin-top:16px">
+            <div class="field"><label>Catégorie</label><select id="upCategory"><option value="">Aucune (auto-détection)</option><option>chambre</option><option>suite</option><option>spa</option><option>piscine</option><option>gastronomie</option><option>restaurant</option><option>exterieur</option><option>vue</option><option>reception</option><option>evenement</option></select></div>
+            <div class="field"><label>Tags (séparés par des virgules)</label><input id="upTags" placeholder="coucher de soleil, terrasse, été"/></div>
+            <div class="field"><label>Légende</label><input id="upCaption" placeholder="Vue depuis la terrasse panoramique"/></div>
+            <div class="field"><label>&nbsp;</label><button class="btn primary" id="uploadBtn">Uploader</button></div>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>Alimenter depuis le web</h2>
+          <div class="grid">
+            <div class="field" style="grid-column:span 2"><label>Collecter les médias d'un site</label><div class="row"><input id="collectUrl" placeholder="https://www.votre-hotel.com/galerie" style="flex:1;padding:11px 13px;border:1.5px solid var(--line);border-radius:var(--r-md)"/><button class="btn primary" id="collectBtn">Collecter</button></div></div>
+            <div class="field"><label>Importer un média (URL)</label><div class="row"><input id="fetchUrl" placeholder="https://…/photo.jpg" style="flex:1;padding:11px 13px;border:1.5px solid var(--line);border-radius:var(--r-md)"/><button class="btn ghost" id="fetchBtn">Importer</button></div></div>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>Générer par IA</h2>
+          <div class="desc">Modèles open source de dernière génération — ou vos vraies images pour les vidéos</div>
+          <div class="grid">
+            <div class="field"><label>Prompt image</label><div class="row"><input id="imgPrompt" placeholder="La piscine au coucher du soleil" style="flex:1;padding:11px 13px;border:1.5px solid var(--line);border-radius:var(--r-md)"/></div></div>
+            <div class="field"><label>Fournisseur</label><select id="imgProvider"><option value="auto">Auto</option><option value="openai">OpenAI</option><option value="stability">Stability</option><option value="replicate">Replicate (Flux)</option><option value="fal">fal.ai (Flux)</option><option value="huggingface">Hugging Face</option><option value="together">Together</option><option value="getimg">getimg.ai</option><option value="local">Local</option></select></div>
+            <div class="field"><label>&nbsp;</label><button class="btn primary" id="imgBtn">Générer l'image</button></div>
+          </div>
+          <div class="grid" style="margin-top:14px">
+            <div class="field"><label>Sujet vidéo</label><div class="row"><input id="vidTopic" placeholder="Visite express de l'hôtel" style="flex:1;padding:11px 13px;border:1.5px solid var(--line);border-radius:var(--r-md)"/></div></div>
+            <div class="field"><label>Mode</label><select id="vidMode"><option value="ffmpeg">ffmpeg (vos images + sous-titres)</option><option value="ai">IA avec repli ffmpeg</option><option value="replicate">Replicate (Wan 2.2)</option><option value="fal">fal.ai (Wan 2.2)</option></select></div>
+            <div class="field"><label>&nbsp;</label><button class="btn primary" id="vidBtn">Générer la vidéo</button></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="section-head">
+            <h2>Médiathèque</h2>
+            <span class="muted" id="mediaCount"></span>
+            <div class="spacer" style="flex:1"></div>
+            <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="mediaSearch" placeholder="Rechercher…"/></div>
+          </div>
+          <div class="row" id="categoryChips" style="margin-bottom:16px"></div>
+          <div class="media-grid" id="mediaGrid"></div>
+        </div>
+      </section>
+
+      <!-- Leads -->
+      <section id="tab-leads" class="tab">
+        <div class="panel">
+          <div class="section-head">
+            <h2>Leads</h2>
+            <div class="spacer" style="flex:1"></div>
+            <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="leadSearch" placeholder="Rechercher un lead…"/></div>
+            <button class="btn dark" id="nurtureAll">💬 Nurturing</button>
+            <button class="btn ghost" id="viewToggle">Basculer : Pipeline</button>
+          </div>
+          <div id="leadsList"><div class="tbl-wrap"><table id="leadsTable"><thead><tr><th>Nom</th><th>Contact</th><th>Canal</th><th>Source</th><th>Statut</th><th>Messages</th><th>Actions</th></tr></thead><tbody></tbody></table></div></div>
+          <div id="leadsPipeline" style="display:none"><div class="pipeline" id="pipeline"></div></div>
+        </div>
+      </section>
+
+      <!-- Réservations -->
+      <section id="tab-bookings" class="tab">
+        <div class="panel">
+          <div class="section-head"><h2>Réservations</h2><span class="muted" id="bookingsCount"></span></div>
+          <div class="tbl-wrap"><table id="bookingsTable"><thead><tr><th>Client</th><th>Arrivée</th><th>Départ</th><th>Chambre</th><th>Montant</th><th>Statut</th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- Annonces -->
+      <section id="tab-ads" class="tab">
+        <div class="panel">
+          <div class="section-head"><h2>Nouvelle annonce</h2></div>
+          <div class="grid">
+            <div class="field"><label>Nom</label><input id="adName" placeholder="Annonce été"/></div>
+            <div class="field"><label>Plateforme</label><select id="adPlatform"><option value="meta">Meta</option><option value="tiktok">TikTok</option></select></div>
+            <div class="field"><label>Budget (€/jour)</label><input id="adBudget" type="number" min="1"/></div>
+            <div class="field"><label>&nbsp;</label><button class="btn primary" id="adCreateBtn">Créer l'annonce</button></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="section-head"><h2>Annonces existantes</h2></div>
+          <div class="tbl-wrap"><table id="adsTable"><thead><tr><th>Nom</th><th>Plateforme</th><th>Statut</th><th>Budget</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- Intégrations -->
+      <section id="tab-integrations" class="tab">
+        <div class="panel">
+          <div class="section-head"><h2>État des connexions</h2><button class="btn ghost small" onclick="loadIntegrations()">↻ Rafraîchir</button></div>
+          <div class="tbl-wrap"><table id="integrationsTable"><thead><tr><th>Service</th><th>Configuré</th><th>Valide</th><th>Détail</th></tr></thead><tbody></tbody></table></div>
+        </div>
+        <div class="panel">
+          <h2>Connecter Facebook</h2>
+          <div class="desc">User Access Token → l'agent récupère le token longue durée de votre page</div>
+          <div class="grid">
+            <div class="field" style="grid-column:span 2"><label>User Access Token</label><input id="fbToken" placeholder="EAA…"/></div>
+            <div class="field"><label>Page ID (si plusieurs pages)</label><input id="fbPageId" placeholder="123456789"/></div>
+            <div class="field"><label>&nbsp;</label><label class="check"><input type="checkbox" id="fbPersist" checked/> Écrire dans .env</label></div>
+            <div class="field"><label>&nbsp;</label><button class="btn primary" id="fbConnectBtn">Connecter</button></div>
+          </div>
+          <div id="fbPages" style="margin-top:14px"></div>
+        </div>
+        <div class="panel">
+          <h2>Connecter TikTok</h2>
+          <div class="desc">OAuth en deux étapes : générer l'URL, autoriser, échanger le code</div>
+          <div class="grid">
+            <div class="field" style="grid-column:span 2"><label>URI de redirection (déclarée dans l'app TikTok)</label><input id="ttRedirect" placeholder="https://votre-domaine/callback"/></div>
+            <div class="field"><label>&nbsp;</label><button class="btn dark" id="ttAuthBtn">1. Générer l'URL</button></div>
+          </div>
+          <div id="ttAuthUrl" class="muted" style="margin:12px 0"></div>
+          <div class="grid">
+            <div class="field" style="grid-column:span 2"><label>Code reçu dans l'URL de redirection</label><input id="ttCode" placeholder="abc123…"/></div>
+            <div class="field"><label>&nbsp;</label><label class="check"><input type="checkbox" id="ttPersist" checked/> Écrire dans .env</label></div>
+            <div class="field"><label>&nbsp;</label><button class="btn primary" id="ttConnectBtn">2. Échanger le code</button></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- Modale générique -->
+<div class="modal" id="modal">
+  <div class="modal-card" id="modalCard">
+    <button class="modal-close" id="modalClose">✕</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<!-- Aperçu -->
+<div class="modal" id="previewModal">
+  <div class="modal-card wide" style="background:transparent;box-shadow:none;width:auto;max-width:94vw">
+    <div id="previewBox"></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+/* ════════════════ Cœur API ════════════════ */
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const fmtDate = (d) => d ? new Date(d).toLocaleString("fr-FR", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" }) : "—";
+const fmtDay = (d) => d ? new Date(d).toLocaleDateString("fr-FR") : "—";
+let apiKey = localStorage.getItem("hotel_api_key") || "";
+
+async function api(method, path, body, retried) {
+  const headers = {};
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (apiKey) headers["x-api-key"] = apiKey;
+  const res = await fetch("/api" + path, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined });
+  if (res.status === 401 && !retried) {
+    openKeyModal("Accès refusé — entrez la clé API (ADMIN_API_KEY)");
+    return { ok:false, status:401, data:{ error:"Clé API requise" } };
+  }
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  return { ok:res.ok, status:res.status, data };
+}
+
+function toast(msg, type = "ok") {
+  const t = document.createElement("div");
+  t.className = "toast " + type;
+  t.textContent = msg;
+  $("#toasts").appendChild(t);
+  setTimeout(() => { t.style.opacity = "0"; t.style.transition = "opacity .3s"; setTimeout(() => t.remove(), 320); }, 4200);
+}
+
+/* ════════════════ Modale générique ════════════════ */
+function openModal(html, wide) {
+  $("#modalCard").className = "modal-card" + (wide ? " wide" : "");
+  $("#modalBody").innerHTML = html;
+  $("#modal").classList.add("open");
+}
+function closeModal() { $("#modal").classList.remove("open"); }
+$("#modalClose").addEventListener("click", closeModal);
+$("#modal").addEventListener("click", (e) => { if (e.target.id === "modal") closeModal(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeModal(); closePreview(); } });
+
+function openKeyModal(reason) {
+  openModal(`
+    <h2>Clé API</h2>
+    <div class="desc">${esc(reason || "Protégez l'accès à l'API d'administration.")}</div>
+    <div class="field"><label>ADMIN_API_KEY</label><input id="keyInput" type="password" value="${esc(apiKey)}" placeholder="Clé d'administration"/></div>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeModal()">Annuler</button>
+      <button class="btn primary" id="keySave">Enregistrer</button>
+    </div>`);
+  $("#keySave").addEventListener("click", () => {
+    apiKey = $("#keyInput").value.trim();
+    localStorage.setItem("hotel_api_key", apiKey);
+    toast(apiKey ? "✅ Clé enregistrée" : "⚠️ Aucune clé — API ouverte (démo)");
+    closeModal();
+    loadTab(currentTab);
+  });
+}
+$("#keyBtn").addEventListener("click", () => openKeyModal("La clé est conservée uniquement dans votre navigateur (localStorage)."));
+
+/* ════════════════ Navigation ════════════════ */
+const TITLES = { overview:"Vue d'ensemble", campaigns:"Campagnes", posts:"Posts", calendar:"Calendrier éditorial", media:"Médiathèque", leads:"Leads", bookings:"Réservations", ads:"Annonces", integrations:"Intégrations" };
+const SUBS = { overview:"Pilotage marketing du Conrad Grand Luxury Hotel", campaigns:"Créez et lancez vos campagnes de bout en bout", posts:"Contenus générés — prévisualisez avant de publier", calendar:"Fréquence, horaires et tons par plateforme — l'agent planifie tout seul", media:"Les vraies images du palace, taguées pour l'agent", leads:"Du premier contact à la réservation", bookings:"Réservations confirmées", ads:"Campagnes publicitaires Meta & TikTok", integrations:"Connexions Facebook, TikTok, WhatsApp et IA" };
+let currentTab = "overview";
+
+document.querySelectorAll("#nav button").forEach((btn) => {
+  btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+});
+window.switchTab = (tab) => {
+  document.querySelectorAll("#nav button").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+  document.querySelectorAll(".tab").forEach((s) => s.classList.remove("active"));
+  $("#tab-" + tab).classList.add("active");
+  $("#pageTitle").textContent = TITLES[tab];
+  $("#pageSub").textContent = SUBS[tab];
+  currentTab = tab;
+  loadTab(tab);
+};
+
+function loadTab(tab) {
+  if (tab === "overview") loadOverview();
+  if (tab === "campaigns") loadCampaigns();
+  if (tab === "posts") loadPosts();
+  if (tab === "calendar") loadCalendar();
+  if (tab === "media") loadMedia();
+  if (tab === "leads") loadLeads();
+  if (tab === "bookings") loadBookings();
+  if (tab === "ads") loadAds();
+  if (tab === "integrations") loadIntegrations();
+}
+
+/* ════════════════ Badges & helpers ════════════════ */
+const STATUS_OK = ["published","active","booked","confirmed","sent"];
+const STATUS_WARN = ["scheduled","paused","pending","draft","ready"];
+const STATUS_ERR = ["failed"];
+function badge(s) {
+  const cls = STATUS_OK.includes(s) ? "ok" : STATUS_WARN.includes(s) ? "warn" : STATUS_ERR.includes(s) ? "err" : "";
+  return `<span class="badge ${cls}">${esc(s)}</span>`;
+}
+function skel(n) { return Array.from({ length:n }, () => '<div class="skeleton"></div>').join(""); }
+
+/* ════════════════ Vue d'ensemble ════════════════ */
+async function loadOverview() {
+  const r = await api("GET", "/dashboard");
+  if (!r.ok) return toast(r.data?.error || "Erreur", "err");
+  const d = r.data;
+  const kpis = [
+    ["Campagnes", d.campaigns, "", "campaigns"],
+    ["Posts", d.posts, "", "posts"],
+    ["Leads", d.leads.total, `dont ${d.leads.new} nouveaux`, "leads"],
+    ["Réservations", d.bookings.total, `${d.bookings.revenue} € de revenus`, "bookings"],
+    ["Messages envoyés", d.messages, "email · WhatsApp · Messenger", "integrations"],
+    ["Dépenses pubs", `${d.spend} €`, `${d.ads} annonces`, "ads"],
+  ];
+  $("#kpis").innerHTML = kpis.map(([l, n, s, tab]) => `
+    <div class="kpi" style="cursor:pointer" onclick="switchTab('${tab}')">
+      <div class="num">${n}</div><div class="lbl">${l}</div>${s ? `<div class="sub">${s}</div>` : ""}
+    </div>`).join("");
+
+  const total = Math.max(1, d.leads.total);
+  const booked = Math.max(0, d.leads.booked);
+  $("#funnel").innerHTML = `
+    <div class="row"><div class="lbl">Leads</div><div class="bar" style="width:100%">${d.leads.total}</div></div>
+    <div class="row"><div class="lbl">Réservés</div><div class="bar gold" style="width:${Math.max(8, (booked/total)*100)}%">${booked}</div></div>
+    <div class="row"><div class="lbl">Revenus</div><div class="bar" style="width:${Math.min(100, Math.max(8, (d.bookings.revenue/1000)*100))}%">${d.bookings.revenue} €</div></div>`;
+}
+
+$("#qaCampaign").addEventListener("click", () => openCampaignModal());
+$("#qaNurture").addEventListener("click", async () => {
+  const r = await api("POST", "/leads/nurture", {});
+  toast(r.ok ? `💬 Nurturing : ${r.data.sent} message(s) envoyé(s)` : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+});
+
+/* ════════════════ Campagnes ════════════════ */
+$("#newCampaignBtn").addEventListener("click", () => openCampaignModal());
+
+function openCampaignModal() {
+  ensureTones().then(() => {
+    openModal(`
+    <h2>Nouvelle campagne</h2>
+    <div class="desc">L'agent génère les textes (Groq), choisit les vraies images de la médiathèque et assemble la vidéo.</div>
+    <div class="field" style="margin-bottom:14px"><label>Nom de la campagne</label><input id="cName" placeholder="Week-end romantique — suite & spa"/></div>
+    <div class="field" style="margin-bottom:14px"><label>Ton éditorial</label><div class="row" id="toneWrap">${toneChipsHtml("")}</div></div>
+    <div class="grid" style="margin-bottom:14px">
+      <div class="field"><label>Objectif</label><select id="cObjective"><option value="awareness">Notoriété</option><option value="OUTCOME_TRAFFIC">Trafic</option><option value="OUTCOME_ENGAGEMENT">Engagement</option><option value="OUTCOME_CONVERSIONS">Conversions</option></select></div>
+      <div class="field"><label>Budget (€/jour)</label><input id="cBudget" type="number" min="1" placeholder="600"/></div>
+    </div>
+    <label class="check"><input type="checkbox" id="cPublish" checked/> Publier immédiatement</label>
+    <label class="check"><input type="checkbox" id="cVideo"/> Générer la vidéo TikTok</label>
+    <label class="check"><input type="checkbox" id="cAds"/> Lancer les publicités (si budget)</label>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeModal()">Annuler</button>
+      <button class="btn primary" id="cCreate">Créer & lancer</button>
+    </div>`);
+    window.__pickedTone = "";
+    $("#cCreate").addEventListener("click", async () => {
+      const name = $("#cName").value.trim();
+      if (name.length < 2) return toast("Nom de campagne requis", "err");
+      const btn = $("#cCreate"); btn.disabled = true; btn.textContent = "Création…";
+      const created = await api("POST", "/campaigns", {
+        name,
+        objective: $("#cObjective").value,
+        tone: window.__pickedTone || undefined,
+        budget: $("#cBudget").value ? Number($("#cBudget").value) : undefined,
+      });
+      if (!created.ok) { btn.disabled = false; btn.textContent = "Créer & lancer"; return toast(created.data?.error || "Erreur", "err"); }
+      closeModal();
+      const opts = { publishNow: $("#cPublish").checked, withVideo: $("#cVideo").checked, withAds: $("#cAds").checked };
+      toast(`🏨 Campagne « ${name} » créée — génération en cours…`, "ok");
+      const run = await api("POST", `/campaigns/${created.data.id}/run`, opts);
+      if (run.ok) {
+        toast(`✨ Pipeline terminé : ${run.data.posts.length} posts, ${run.data.media.length} médias${run.data.errors.length ? `, ${run.data.errors.length} alerte(s)` : ""}`, "ok");
+      } else {
+        toast(run.data?.error || "Échec du pipeline", "err");
+      }
+      loadCampaigns();
+    });
+  });
+}
+
+/* Tons éditoriaux */
+window.__tones = null;
+async function ensureTones() {
+  if (!window.__tones) {
+    const r = await api("GET", "/content/tones");
+    window.__tones = r.ok ? r.data : [];
+  }
+  return window.__tones;
+}
+function toneChipsHtml(selected) {
+  return (window.__tones || []).map((t) =>
+    `<button type="button" class="chip ${selected === t.id ? "active" : ""}" title="${esc(t.description)}" onclick="pickTone(event, '${esc(t.id)}')">${esc(t.label)}</button>`).join("");
+}
+window.pickTone = (e, id) => {
+  const wrap = e.target.closest("[id]") || document;
+  wrap.querySelectorAll(".chip").forEach((c) => c.classList.remove("active"));
+  e.target.classList.add("active");
+  window.__pickedTone = id;
+};
+function toneLabel(id) {
+  const t = (window.__tones || []).find((x) => x.id === id);
+  return t ? t.label : (id || "—");
+}
+window.editCampaignTone = async (id, current) => {
+  await ensureTones();
+  openModal(`
+    <h2>Ton de la campagne</h2>
+    <div class="desc">Tous les contenus générés pour cette campagne adopteront ce style.</div>
+    <div class="row" id="toneWrap">${toneChipsHtml(current)}
+      <button type="button" class="chip" onclick="pickTone(event, '')">Défaut</button>
+    </div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Annuler</button><button class="btn primary" id="tDo">Enregistrer</button></div>`);
+  window.__pickedTone = current || "";
+  $("#tDo").addEventListener("click", async () => {
+    const r = await api("PATCH", `/campaigns/${id}`, { tone: window.__pickedTone || null });
+    toast(r.ok ? "🎙 Ton enregistré" : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+    closeModal(); if (r.ok) loadCampaigns();
+  });
+};
+
+async function loadCampaigns() {
+  await ensureTones();
+  const r = await api("GET", "/campaigns");
+  if (!r.ok) return;
+  const rows = (r.data || []).map((c) => `
+    <tr>
+      <td><div style="font-weight:600;color:var(--navy-900)">${esc(c.name)}</div><div class="muted">${fmtDate(c.createdAt)}</div></td>
+      <td>${esc(c.objective)}</td>
+      <td><button class="chip" onclick="editCampaignTone('${c.id}', '${esc(c.tone || "")}')" title="Modifier le ton">🎙 ${esc(toneLabel(c.tone))} ✎</button></td>
+      <td>${badge(c.status)}</td>
+      <td>${c.budget ? c.budget + " €" : "—"}</td>
+      <td>${c._count.posts}</td>
+      <td>${c._count.leads}</td>
+      <td>${c._count.bookings}</td>
+      <td><div class="row">
+        <button class="btn dark small" onclick="runCampaign('${c.id}')">Lancer</button>
+        <button class="btn ghost small" onclick="pauseCampaign('${c.id}')">Pause</button>
+        <button class="btn ghost small" onclick="copyMessengerLink('${c.id}')">m.me</button>
+      </div></td>
+    </tr>`).join("");
+  $("#campaignsTable tbody").innerHTML = rows || '<tr><td colspan="9"><div class="empty"><div class="big">🏨</div>Aucune campagne — créez la première.</div></td></tr>';
+}
+window.runCampaign = async (id) => {
+  toast("Pipeline en cours…", "ok");
+  const r = await api("POST", `/campaigns/${id}/run`, { publishNow: false, withVideo: true, withAds: false });
+  toast(r.ok ? "✨ Pipeline exécuté" : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+  if (r.ok) loadCampaigns();
+};
+window.pauseCampaign = async (id) => { await api("POST", `/campaigns/${id}/pause`, {}); toast("Campagne en pause", "ok"); loadCampaigns(); };
+window.copyMessengerLink = async (id) => {
+  const r = await api("GET", `/messaging/messenger-link/${id}`);
+  if (r.ok) { navigator.clipboard?.writeText(r.data.url); toast(`Lien m.me copié : ${r.data.url}`, "ok"); }
+  else toast(r.data?.error || "Erreur", "err");
+};
+
+/* ════════════════ Posts ════════════════ */
+window.__posts = [];
+async function loadPosts() {
+  const r = await api("GET", "/posts");
+  if (!r.ok) return;
+  window.__posts = r.data || [];
+  renderPosts();
+}
+function renderPosts() {
+  const q = ($("#postSearch").value || "").toLowerCase();
+  const f = $("#postFilter").value;
+  const list = window.__posts.filter((p) =>
+    (!f || p.status === f) && (!q || (p.text || "").toLowerCase().includes(q)));
+  $("#postsTable tbody").innerHTML = list.map((p, i) => {
+    const idx = window.__posts.indexOf(p);
+    return `<tr>
+      <td><span class="badge gold">${p.platform === "facebook" ? "Facebook" : p.platform}</span></td>
+      <td style="max-width:340px"><div class="muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((p.text || "").slice(0, 110))}</div>${p.mediaUrl ? `<span class="muted">📎 média</span>` : ""}</td>
+      <td>${badge(p.status)}${p.reviewScore != null ? ` <span class="badge ${p.reviewScore >= 40 ? "ok" : "err"}" title="Score de relecture IA">${p.reviewScore}/100</span>` : ""}</td>
+      <td>${fmtDate(p.scheduledAt)}</td>
+      <td><div class="row">
+        <button class="btn ghost small" onclick="previewPost(${idx})">👁</button>
+        ${p.status !== "published" ? `<button class="btn ghost small" onclick="reviewPost('${p.id}')">🔍 Relecture</button>` : ""}
+        ${p.status !== "published" ? `<button class="btn ghost small" onclick="editPostText('${p.id}')">✎</button>` : ""}
+        <button class="btn dark small" onclick="publishPost('${p.id}')">Publier</button>
+        <button class="btn ghost small" onclick="schedulePost('${p.id}')">Planifier</button>
+        <button class="btn danger small" onclick="deletePost('${p.id}')">✕</button>
+      </div></td>
+    </tr>`;
+  }).join("") || '<tr><td colspan="5"><div class="empty"><div class="big">✍️</div>Aucun post.</div></td></tr>';
+}
+
+window.editPostText = (id) => {
+  const p = window.__posts.find((x) => x.id === id);
+  if (!p) return;
+  openModal(`
+    <h2>Modifier le brouillon</h2>
+    <div class="desc">Le post repassera en brouillon et sera relu par l'IA avant publication.</div>
+    <div class="field"><label>Texte</label><textarea id="pTxt" rows="7" style="padding:12px;border:1.5px solid var(--line);border-radius:var(--r-md);font-family:var(--sans);font-size:.92rem">${esc(p.text)}</textarea></div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Annuler</button><button class="btn primary" id="pDo">Enregistrer</button></div>`);
+  $("#pDo").addEventListener("click", async () => {
+    const text = $("#pTxt").value.trim();
+    if (!text) return toast("Texte vide", "err");
+    const r = await api("PATCH", `/posts/${id}`, { text });
+    toast(r.ok ? "✏️ Brouillon mis à jour" : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+    closeModal(); if (r.ok) loadPosts();
+  });
+};
+
+window.reviewPost = async (id) => {
+  toast("🔍 Relecture IA en cours…", "ok");
+  const r = await api("POST", `/posts/${id}/review`, {});
+  if (!r.ok) return toast(r.data?.error || "Erreur", "err");
+  const d = r.data;
+  openModal(`
+    <h2>Relecture IA</h2>
+    <div class="desc">Score ${d.score}/100 — ${d.verdict === "ready" ? "✅ Prêt à publier" : "⚠️ À retravailler"} (${esc(d.provider)})</div>
+    ${d.issues.length ? `<div style="margin-bottom:14px">${d.issues.map((i) => `<div style="padding:8px 12px;background:#FBF6EC;border-left:3px solid var(--gold-500);border-radius:6px;margin-bottom:8px;font-size:.86rem"><b>${esc(i.type)}</b> — ${esc(i.message)}</div>`).join("")}</div>` : '<div class="muted" style="margin-bottom:14px">Aucun problème détecté 🎉</div>'}
+    ${d.correctedText ? '<div class="muted">✅ Corrections appliquées automatiquement au brouillon.</div>' : ""}
+    <div class="modal-actions"><button class="btn primary" onclick="closeModal()">Fermer</button></div>`);
+  loadPosts();
+};
+$("#postSearch").addEventListener("input", renderPosts);
+$("#postFilter").addEventListener("change", renderPosts);
+window.publishPost = async (id) => {
+  const r = await api("POST", `/posts/${id}/publish`, {});
+  toast(r.ok ? "✅ Post publié" : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+  if (r.ok) loadPosts();
+};
+window.schedulePost = (id) => {
+  openModal(`
+    <h2>Planifier la publication</h2>
+    <div class="desc">Le post sera publié automatiquement par le planificateur.</div>
+    <div class="field"><label>Date et heure</label><input id="sAt" type="datetime-local"/></div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Annuler</button><button class="btn primary" id="sDo">Planifier</button></div>`);
+  $("#sDo").addEventListener("click", async () => {
+    const v = $("#sAt").value;
+    if (!v) return toast("Choisissez une date", "err");
+    const r = await api("POST", `/posts/${id}/schedule`, { scheduledAt: new Date(v).toISOString() });
+    toast(r.ok ? "🗓 Post planifié" : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+    closeModal(); if (r.ok) loadPosts();
+  });
+};
+window.deletePost = async (id) => { await api("DELETE", `/posts/${id}`); toast("Post supprimé"); loadPosts(); };
+$("#runScheduled").addEventListener("click", async () => {
+  const r = await api("POST", "/posts/run-scheduled", {});
+  toast(r.ok ? `▶ ${r.data.published} post(s) publié(s)` : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+  if (r.ok) loadPosts();
+});
+
+/* ════════════════ Aperçus ════════════════ */
+window.previewPost = (i) => {
+  const p = window.__posts[i];
+  if (!p) return;
+  if (p.platform === "tiktok") {
+    $("#previewBox").innerHTML = `<div class="preview-wrap"><div class="phone">
+      <div class="stage">${p.mediaType === "video" && p.mediaUrl ? `<video src="${esc(p.mediaUrl)}" autoplay loop controls playsinline></video>` : p.mediaUrl ? `<img src="${esc(p.mediaUrl)}"/>` : '<div style="color:#fff">Sans média</div>'}</div>
+      ${p.text ? `<div class="caption">${esc(p.text)}</div>` : ""}
+    </div></div>`;
+  } else {
+    $("#previewBox").innerHTML = `<div class="preview-wrap"><div class="fb-card">
+      <div class="head"><div class="avatar">C</div><div><div>Conrad Grand Luxury Hotel</div><div class="muted">Statut : ${esc(p.status)}</div></div></div>
+      <div class="text">${esc(p.text)}</div>
+      ${p.mediaUrl ? `<img src="${esc(p.mediaUrl)}"/>` : ""}
+      <div class="actions"><span>👍 J'aime</span><span>💬 Commenter</span><span>↗ Partager</span></div>
+    </div></div>`;
+  }
+  $("#previewModal").classList.add("open");
+};
+window.closePreview = () => { $("#previewModal").classList.remove("open"); $("#previewBox").innerHTML = ""; };
+$("#previewModal").addEventListener("click", (e) => { if (e.target.id === "previewModal") closePreview(); });
+
+/* ════════════════ Médias ════════════════ */
+let mediaCat = "", mediaQ = "", mediaDebounce;
+window.__media = [];
+async function loadMedia() {
+  const params = new URLSearchParams();
+  if (mediaCat) params.set("category", mediaCat);
+  if (mediaQ) params.set("q", mediaQ);
+  const r = await api("GET", "/media?" + params.toString());
+  if (!r.ok) return;
+  window.__media = r.data || [];
+  renderMedia();
+  loadCategories();
+}
+async function loadCategories() {
+  const r = await api("GET", "/media/categories");
+  if (!r.ok) return;
+  const chips = (r.data || []).map((c) =>
+    `<button class="chip ${mediaCat === c.category ? "active" : ""}" onclick="setMediaCat('${esc(c.category)}')">${esc(c.category)} <span class="muted" style="font-size:.7rem">${c.count}</span></button>`).join("");
+  $("#categoryChips").innerHTML = `<button class="chip ${!mediaCat ? "active" : ""}" onclick="setMediaCat('')">Tous</button>` + chips;
+}
+window.setMediaCat = (c) => { mediaCat = c; loadMedia(); };
+$("#mediaSearch").addEventListener("input", (e) => {
+  clearTimeout(mediaDebounce);
+  mediaDebounce = setTimeout(() => { mediaQ = e.target.value.trim(); loadMedia(); }, 260);
+});
+
+function renderMedia() {
+  const list = window.__media;
+  $("#mediaCount").textContent = `${list.length} média(s)`;
+  $("#mediaGrid").innerHTML = list.map((m) => `
+    <div class="media-item">
+      <div style="position:relative" onclick="openMedia('${esc(m.url)}','${m.type}')">
+        ${m.type === "video" ? `<video class="thumb" src="${esc(m.url)}" muted></video>` : `<img class="thumb" src="${esc(m.url)}" loading="lazy"/>`}
+        <button class="btn ghost small" style="position:absolute;top:8px;right:8px;background:#FFFFFFF0" onclick="event.stopPropagation();editMedia('${m.id}')">✎</button>
+      </div>
+      <div class="meta">${m.category ? `<span class="badge gold">${esc(m.category)}</span>` : '<span class="badge">non catégorisé</span>'}<span>${fmtDay(m.createdAt)}</span></div>
+      ${m.caption ? `<div class="muted" style="padding:0 10px 8px;font-size:.74rem">${esc(m.caption.slice(0, 64))}</div>` : ""}
+      ${m.tags ? `<div style="padding:0 10px 10px">${m.tags.split(",").slice(0, 4).map((t) => `<span class="tag">${esc(t.trim())}</span>`).join("")}</div>` : ""}
+    </div>`).join("") || '<div class="empty" style="grid-column:1/-1"><div class="big">🖼</div>Médiathèque vide — ajoutez, collectez ou générez des médias.</div>';
+}
+
+window.editMedia = (id) => {
+  const m = window.__media.find((x) => x.id === id);
+  if (!m) return;
+  const cats = ["chambre","suite","spa","piscine","gastronomie","restaurant","exterieur","vue","reception","evenement"];
+  openModal(`
+    <h2>Métadonnées du média</h2>
+    <div class="desc">C'est grâce à ces informations que l'agent choisit les bons visuels pour chaque post.</div>
+    <div class="grid">
+      <div class="field"><label>Catégorie</label><select id="eCat"><option value="">Aucune</option>${cats.map((c) => `<option ${m.category === c ? "selected" : ""}>${c}</option>`).join("")}</select></div>
+      <div class="field"><label>Légende</label><input id="eCaption" value="${esc(m.caption || "")}" placeholder="Vue depuis la terrasse"/></div>
+    </div>
+    <div class="field" style="margin-top:12px"><label>Tags (séparés par des virgules)</label><input id="eTags" value="${esc(m.tags || "")}" placeholder="coucher de soleil, terrasse"/></div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Annuler</button><button class="btn primary" id="eDo">Enregistrer</button></div>`);
+  $("#eDo").addEventListener("click", async () => {
+    const r = await api("PATCH", `/media/${id}`, {
+      category: $("#eCat").value || null,
+      caption: $("#eCaption").value.trim() || null,
+      tags: $("#eTags").value.trim() || null,
+    });
+    toast(r.ok ? "✅ Métadonnées enregistrées" : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+    closeModal(); if (r.ok) loadMedia();
+  });
+};
+
+/* Upload avec drag & drop + catégorisation */
+const dropZone = $("#dropZone"), fileInput = $("#uploadFile");
+dropZone.addEventListener("click", () => fileInput.click());
+["dragover", "dragenter"].forEach((ev) => dropZone.addEventListener(ev, (e) => { e.preventDefault(); dropZone.classList.add("drag"); }));
+["dragleave", "drop"].forEach((ev) => dropZone.addEventListener(ev, (e) => { e.preventDefault(); dropZone.classList.remove("drag"); }));
+dropZone.addEventListener("drop", (e) => { if (e.dataTransfer.files.length) doUpload(e.dataTransfer.files[0]); });
+fileInput.addEventListener("change", () => { if (fileInput.files.length) doUpload(fileInput.files[0]); });
+
+async function doUpload(file) {
+  const fd = new FormData();
+  // Les champs doivent précéder le fichier (ordre du flux multipart)
+  const cat = $("#upCategory").value, tags = $("#upTags").value.trim(), cap = $("#upCaption").value.trim();
+  if (cat) fd.append("category", cat);
+  if (tags) fd.append("tags", tags);
+  if (cap) fd.append("caption", cap);
+  fd.append("file", file);
+  const headers = {}; if (apiKey) headers["x-api-key"] = apiKey;
+  toast("⏫ Upload en cours…", "ok");
+  const res = await fetch("/api/media/upload", { method: "POST", headers, body: fd });
+  const data = await res.json();
+  toast(res.ok ? "✅ Média ajouté à la médiathèque" : data.error || "Erreur", res.ok ? "ok" : "err");
+  if (res.ok) { fileInput.value = ""; $("#upTags").value = ""; $("#upCaption").value = ""; loadMedia(); }
+}
+$("#uploadBtn").addEventListener("click", () => { if (fileInput.files.length) doUpload(fileInput.files[0]); else fileInput.click(); });
+
+window.openMedia = (url, type) => {
+  $("#previewBox").innerHTML = type === "video"
+    ? `<video src="${esc(url)}" controls autoplay style="max-width:92vw;max-height:82vh;border-radius:12px"></video>`
+    : `<img src="${esc(url)}" style="max-width:92vw;max-height:82vh;border-radius:12px"/>`;
+  $("#previewModal").classList.add("open");
+};
+$("#collectBtn").addEventListener("click", async () => {
+  const url = $("#collectUrl").value.trim();
+  if (!url) return toast("Indiquez l'URL du site", "err");
+  const btn = $("#collectBtn"); btn.disabled = true; btn.textContent = "Collecte…";
+  toast("📸 Parcours du site en cours…", "ok");
+  const r = await api("POST", "/media/collect", { url });
+  btn.disabled = false; btn.textContent = "Collecter";
+  toast(r.ok ? `✅ ${r.data.collected} média(s) collecté(s), ${r.data.skipped} ignoré(s)` : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+  if (r.ok) loadMedia();
+});
+$("#fetchBtn").addEventListener("click", async () => {
+  const url = $("#fetchUrl").value.trim();
+  if (!url) return toast("Indiquez l'URL du média", "err");
+  const r = await api("POST", "/media/fetch", { url });
+  toast(r.ok ? "✅ Média importé" : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+  if (r.ok) loadMedia();
+});
+$("#fetchBtn").addEventListener("click", async () => {
+  const prompt = $("#imgPrompt").value.trim();
+  if (!prompt) return toast("Décrivez l'image", "err");
+  const btn = $("#imgBtn"); btn.disabled = true; btn.textContent = "Génération…";
+  const r = await api("POST", "/content/image", { prompt, provider: $("#imgProvider").value });
+  btn.disabled = false; btn.textContent = "Générer l'image";
+  toast(r.ok ? "🖼 Image générée" : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+  if (r.ok) loadMedia();
+});
+$("#vidBtn").addEventListener("click", async () => {
+  const topic = $("#vidTopic").value.trim();
+  if (!topic) return toast("Indiquez le sujet", "err");
+  const btn = $("#vidBtn"); btn.disabled = true; btn.textContent = "Génération…";
+  toast("🎬 Génération vidéo en cours (1 à 3 min)…", "ok");
+  const r = await api("POST", "/content/video", { topic, mode: $("#vidMode").value });
+  btn.disabled = false; btn.textContent = "Générer la vidéo";
+  toast(r.ok ? "🎬 Vidéo générée" : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+  if (r.ok) loadMedia();
+});
+
+/* ════════════════ Calendrier éditorial ════════════════ */
+const DAYS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
+async function loadCalendar() {
+  const r = await api("GET", "/calendar");
+  if (!r.ok) return;
+  const { slots, styles } = r.data;
+  $("#styleCards").innerHTML = Object.entries(styles).map(([k, s]) => `
+    <div class="kpi">
+      <div class="lbl" style="color:var(--gold-500)">${esc(s.name)}</div>
+      <div class="num" style="font-size:1.25rem">${esc(s.frequency)}</div>
+      <div class="sub">🕐 ${esc(s.bestTimes)}</div>
+      <div class="sub" style="margin-top:8px;font-weight:500;color:var(--navy-900)">🎙 ${esc(s.tone)}</div>
+      <div class="sub" style="margin-top:8px">${s.formats.map((f) => `• ${esc(f)}`).join("<br>")}</div>
+      <div class="sub" style="margin-top:8px;font-style:italic">${esc(s.tips)}</div>
+    </div>`).join("");
+  $("#calendarTable tbody").innerHTML = (slots || []).map((s) => `
+    <tr>
+      <td><span class="badge gold">${esc(s.platform)}</span></td>
+      <td>${DAYS[s.dayOfWeek - 1]}</td>
+      <td style="font-weight:600">${esc(s.time)}</td>
+      <td><span class="badge">${esc(s.type)}</span></td>
+      <td style="font-weight:600;color:var(--navy-900)">${esc(s.topic)}</td>
+      <td class="muted">${esc(s.tone || "—")}</td>
+      <td><button class="btn danger small" onclick="deleteSlot('${s.id}')">✕</button></td>
+    </tr>`).join("");
+}
+window.deleteSlot = async (id) => { await api("DELETE", `/calendar/${id}`); toast("Créneau supprimé"); loadCalendar(); };
+
+$("#addSlotBtn").addEventListener("click", () => {
+  openModal(`
+    <h2>Nouveau créneau éditorial</h2>
+    <div class="desc">Fréquence, thème et ton pour une plateforme donnée.</div>
+    <div class="grid">
+      <div class="field"><label>Plateforme</label><select id="sPlatform"><option value="facebook">Facebook</option><option value="tiktok">TikTok</option></select></div>
+      <div class="field"><label>Jour</label><select id="sDay">${DAYS.map((d, i) => `<option value="${i + 1}">${d}</option>`).join("")}</select></div>
+      <div class="field"><label>Heure</label><input id="sTime" type="time" value="18:00"/></div>
+      <div class="field"><label>Type</label><select id="sType"><option value="text">Texte</option><option value="photo">Photo</option><option value="video">Vidéo</option></select></div>
+    </div>
+    <div class="field" style="margin-top:12px"><label>Thème</label><input id="sTopic" placeholder="Le spa au clair de lune"/></div>
+    <div class="field" style="margin-top:12px"><label>Ton</label><input id="sTone" placeholder="relaxant et sensoriel"/></div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Annuler</button><button class="btn primary" id="sDo">Ajouter</button></div>`);
+  $("#sDo").addEventListener("click", async () => {
+    const topic = $("#sTopic").value.trim();
+    if (!topic) return toast("Indiquez un thème", "err");
+    const r = await api("POST", "/calendar", {
+      platform: $("#sPlatform").value,
+      dayOfWeek: Number($("#sDay").value),
+      time: $("#sTime").value,
+      type: $("#sType").value,
+      topic,
+      tone: $("#sTone").value.trim() || undefined,
+    });
+    toast(r.ok ? "🗓 Créneau ajouté" : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+    closeModal(); if (r.ok) loadCalendar();
+  });
+});
+
+$("#genWeekBtn").addEventListener("click", async () => {
+  const btn = $("#genWeekBtn"); btn.disabled = true; btn.textContent = "Génération…";
+  toast("✨ Génération des posts de la semaine (les vidéos prennent quelques minutes)…", "ok");
+  const r = await api("POST", "/calendar/generate", { days: 7 });
+  btn.disabled = false; btn.textContent = "✨ Générer les posts de la semaine";
+  toast(r.ok
+    ? `🗓 ${r.data.created} post(s) planifié(s) — retrouvez-les dans l'onglet Posts`
+    : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+  if (r.ok) switchTab("posts");
+});
+
+/* ════════════════ Leads ════════════════ */
+window.__leads = [];
+let pipelineView = false;
+async function loadLeads() {
+  const r = await api("GET", "/leads");
+  if (!r.ok) return;
+  window.__leads = r.data || [];
+  renderLeads();
+}
+function leadChannel(l) { return l.messengerPsid ? "📩 Messenger" : l.phone ? "💬 WhatsApp" : l.email ? "✉️ Email" : "—"; }
+function renderLeads() {
+  const q = ($("#leadSearch").value || "").toLowerCase();
+  const list = window.__leads.filter((l) => !q || [l.name, l.email, l.phone, l.source].filter(Boolean).join(" ").toLowerCase().includes(q));
+  if (!pipelineView) {
+    $("#leadsList").style.display = "block";
+    $("#leadsPipeline").style.display = "none";
+    $("#leadsTable tbody").innerHTML = list.map((l, i) => `
+      <tr>
+        <td><div style="font-weight:600;color:var(--navy-900)">${esc(l.name || "—")}</div></td>
+        <td>${esc(l.email || l.phone || l.messengerPsid || "—")}</td>
+        <td>${leadChannel(l)}</td>
+        <td><div class="muted">${esc(l.source)}</div>${l.campaign ? `<div class="muted">${esc(l.campaign.name)}</div>` : ""}</td>
+        <td>${badge(l.status)}</td>
+        <td>${l._count.messages}</td>
+        <td><div class="row">
+          ${l.status !== "booked" ? `<button class="btn primary small" onclick="convertLead('${l.id}')">Convertir</button>` : ""}
+          <button class="btn ghost small" onclick="messageLead('${l.id}')">Message</button>
+        </div></td>
+      </tr>`).join("") || '<tr><td colspan="7"><div class="empty"><div class="big">👥</div>Aucun lead pour le moment.</div></td></tr>';
+  } else {
+    $("#leadsList").style.display = "none";
+    $("#leadsPipeline").style.display = "block";
+    const cols = [["new","Nouveaux"],["contacted","Contactés"],["replied","En conversation"],["nurturing","Nurturing"],["booked","Réservés"]];
+    $("#pipeline").innerHTML = cols.map(([status, label]) => {
+      const items = list.filter((l) => l.status === status);
+      return `<div class="pcol"><h3>${label} <span class="count">${items.length}</span></h3>${items.map((l) => `
+        <div class="lcard">
+          <div class="name">${esc(l.name || "Sans nom")}</div>
+          <div class="contact">${esc(l.email || l.phone || l.messengerPsid || "")} · ${leadChannel(l)}</div>
+          <div class="row">
+            ${status !== "booked" ? `<button class="btn primary small" onclick="convertLead('${l.id}')">Convertir</button>` : ""}
+            <button class="btn ghost small" onclick="messageLead('${l.id}')">💬</button>
+          </div>
+        </div>`).join("") || '<div class="muted" style="text-align:center;padding:14px">—</div>'}</div>`;
+    }).join("");
+  }
+}
+$("#leadSearch").addEventListener("input", renderLeads);
+$("#viewToggle").addEventListener("click", () => { pipelineView = !pipelineView; $("#viewToggle").textContent = pipelineView ? "Basculer : Liste" : "Basculer : Pipeline"; renderLeads(); });
+
+window.convertLead = (id) => {
+  openModal(`
+    <h2>Convertir en réservation</h2>
+    <div class="desc">Crée la réservation et marque le lead comme réservé.</div>
+    <div class="grid">
+      <div class="field"><label>Arrivée</label><input id="bIn" type="date"/></div>
+      <div class="field"><label>Départ</label><input id="bOut" type="date"/></div>
+      <div class="field"><label>Chambre</label><input id="bRoom" placeholder="Suite Junior"/></div>
+      <div class="field"><label>Montant (€)</label><input id="bAmount" type="number" min="1"/></div>
+    </div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Annuler</button><button class="btn primary" id="bDo">Confirmer la réservation</button></div>`);
+  $("#bDo").addEventListener("click", async () => {
+    if (!$("#bIn").value || !$("#bOut").value) return toast("Dates requises", "err");
+    const r = await api("POST", `/leads/${id}/convert`, {
+      checkIn: $("#bIn").value, checkOut: $("#bOut").value,
+      roomType: $("#bRoom").value || undefined,
+      amount: $("#bAmount").value ? Number($("#bAmount").value) : undefined,
+    });
+    toast(r.ok ? "🏆 Réservation confirmée" : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+    closeModal(); if (r.ok) { loadLeads(); }
+  });
+};
+window.messageLead = (id) => {
+  openModal(`
+    <h2>Envoyer un message</h2>
+    <div class="desc">Message de nurturing sur le canal choisi (journalisé dans le CRM).</div>
+    <div class="grid">
+      <div class="field"><label>Canal</label><select id="mCh"><option value="">Auto (priorité config)</option><option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="messenger">Messenger</option></select></div>
+      <div class="field"><label>Étape</label><select id="mSt"><option value="0">0 — Accueil</option><option value="1" selected>1 — Relance</option><option value="2">2 — Relance</option><option value="3">3 — Offre</option></select></div>
+    </div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Annuler</button><button class="btn primary" id="mDo">Envoyer</button></div>`);
+  $("#mDo").addEventListener("click", async () => {
+    const r = await api("POST", `/leads/${id}/message`, { channel: $("#mCh").value || undefined, stage: Number($("#mSt").value) });
+    toast(r.ok ? `💬 Message envoyé via ${r.data.channel}` : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+    closeModal(); if (r.ok) loadLeads();
+  });
+};
+$("#nurtureAll").addEventListener("click", async () => {
+  const r = await api("POST", "/leads/nurture", {});
+  toast(r.ok ? `💬 ${r.data.sent} message(s) de nurturing envoyé(s)` : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+  if (r.ok) loadLeads();
+});
+
+/* ════════════════ Réservations ════════════════ */
+async function loadBookings() {
+  const r = await api("GET", "/bookings");
+  if (!r.ok) return;
+  const list = r.data || [];
+  $("#bookingsCount").textContent = `${list.length} réservation(s)`;
+  $("#bookingsTable tbody").innerHTML = list.map((b) => `
+    <tr>
+      <td><div style="font-weight:600;color:var(--navy-900)">${esc(b.lead?.name || "—")}</div><div class="muted">${esc(b.lead?.email || "")}</div></td>
+      <td>${fmtDay(b.checkIn)}</td><td>${fmtDay(b.checkOut)}</td>
+      <td>${esc(b.roomType || "—")}</td>
+      <td style="font-weight:600">${b.amount ? b.amount + " €" : "—"}</td>
+      <td>${badge(b.status)}</td>
+    </tr>`).join("") || '<tr><td colspan="6"><div class="empty"><div class="big">🗓</div>Aucune réservation.</div></td></tr>';
+}
+
+/* ════════════════ Annonces ════════════════ */
+$("#adCreateBtn").addEventListener("click", async () => {
+  const name = $("#adName").value.trim();
+  const budget = $("#adBudget").value;
+  if (!name || !budget) return toast("Nom et budget requis", "err");
+  const platform = $("#adPlatform").value;
+  const r = await api("POST", platform === "meta" ? "/ads/meta" : "/ads/tiktok", { name, budget: Number(budget) });
+  toast(r.ok ? "📣 Annonce créée" : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+  if (r.ok) { $("#adName").value = ""; $("#adBudget").value = ""; loadAds(); }
+});
+async function loadAds() {
+  const r = await api("GET", "/ads");
+  if (!r.ok) return;
+  $("#adsTable tbody").innerHTML = (r.data || []).map((a) => `
+    <tr>
+      <td style="font-weight:600;color:var(--navy-900)">${esc(a.name)}</td>
+      <td><span class="badge gold">${esc(a.platform)}</span></td>
+      <td>${badge(a.status)}</td>
+      <td>${a.budget ? a.budget + " €" : "—"}</td>
+      <td><button class="btn ghost small" onclick="pauseAd('${a.id}')">Pause</button></td>
+    </tr>`).join("") || '<tr><td colspan="5"><div class="empty"><div class="big">📣</div>Aucune annonce.</div></td></tr>';
+}
+window.pauseAd = async (id) => { await api("POST", `/ads/${id}/pause`, {}); toast("Annonce en pause", "ok"); loadAds(); };
+
+/* ════════════════ Intégrations ════════════════ */
+async function loadIntegrations() {
+  const r = await api("GET", "/integrations/status");
+  if (!r.ok) return;
+  $("#integrationsTable tbody").innerHTML = (r.data || []).map((s) => `
+    <tr>
+      <td style="font-weight:600;color:var(--navy-900)">${esc(s.label)}</td>
+      <td>${s.configured ? '<span class="badge ok">oui</span>' : '<span class="badge err">non</span>'}</td>
+      <td>${s.valid === true ? '<span class="badge ok">valide</span>' : s.valid === false ? '<span class="badge err">invalide</span>' : '<span class="badge warn">—</span>'}</td>
+      <td class="muted">${esc(s.detail)}</td>
+    </tr>`).join("");
+}
+let fbUserToken = "";
+$("#fbConnectBtn").addEventListener("click", async () => {
+  fbUserToken = $("#fbToken").value.trim();
+  if (!fbUserToken) return toast("Collez le User Access Token", "err");
+  const r = await api("POST", "/integrations/facebook/connect", { userToken: fbUserToken, pageId: $("#fbPageId").value || undefined, persist: $("#fbPersist").checked });
+  if (r.ok && r.data.step === "select_page") {
+    $("#fbPages").innerHTML = '<div class="desc">Plusieurs pages détectées — choisissez :</div>' +
+      (r.data.pages || []).map((p) => `<button class="btn ghost small" onclick="connectFbPage('${p.id}')">${esc(p.name)} (${p.id})</button>`).join(" ");
+    toast("Choisissez votre page", "ok");
+  } else {
+    toast(r.ok ? `✅ Connecté à « ${r.data.page?.name} »${r.data.restartRequired ? " — redémarrez l'agent" : ""}` : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+    if (r.ok) loadIntegrations();
+  }
+});
+window.connectFbPage = async (pageId) => {
+  const r = await api("POST", "/integrations/facebook/connect", { userToken: fbUserToken, pageId, persist: true });
+  toast(r.ok ? `✅ Connecté à « ${r.data.page?.name} » — redémarrez l'agent` : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+  if (r.ok) loadIntegrations();
+};
+let ttRedirectUri = "";
+$("#ttAuthBtn").addEventListener("click", async () => {
+  ttRedirectUri = $("#ttRedirect").value.trim();
+  if (!ttRedirectUri) return toast("Indiquez l'URI de redirection", "err");
+  const r = await api("GET", `/integrations/tiktok/auth-url?redirectUri=${encodeURIComponent(ttRedirectUri)}`);
+  if (!r.ok) return toast(r.data?.error || "Erreur", "err");
+  $("#ttAuthUrl").innerHTML = `👉 <a href="${esc(r.data.url)}" target="_blank" style="color:var(--gold-500)">Ouvrir l'autorisation TikTok</a>`;
+  toast("Ouvrez le lien, autorisez, puis collez le code reçu", "ok");
+});
+$("#ttConnectBtn").addEventListener("click", async () => {
+  const code = $("#ttCode").value.trim();
+  if (!code || !ttRedirectUri) return toast("Générez d'abord l'URL puis collez le code", "err");
+  const r = await api("POST", "/integrations/tiktok/connect", { code, redirectUri: ttRedirectUri, persist: $("#ttPersist").checked });
+  toast(r.ok ? `✅ Connecté au compte « ${r.data.user?.displayName} »${r.data.restartRequired ? " — redémarrez l'agent" : ""}` : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+  if (r.ok) loadIntegrations();
+});
+
+/* ════════════════ Boot ════════════════ */
+(async () => {
+  try {
+    const h = await api("GET", "/health");
+    if (h.ok) {
+      $("#modeDot").className = "mode-dot" + (h.data.demoMode ? "" : " prod");
+      $("#modeLabel").textContent = h.data.demoMode ? "Mode démo — API simulées" : "Mode réel — production";
+    }
+  } catch {}
+  loadTab("overview");
+})();
+</script>
+</body>
+</html>

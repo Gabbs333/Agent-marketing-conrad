@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Campaign {
+  id        String   @id @default(cuid())
+  name      String
+  platform  String
+  objective String
+  tone      String?
+  status    String   @default("draft")
+  budget    Int?
+  startDate DateTime?
+  endDate   DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  posts    Post[]
+  ads      Ad[]
+  leads    Lead[]
+  bookings Booking[]
+}
+
+model Post {
+  id            String    @id @default(cuid())
+  campaignId    String?
+  calendarSlotId String?
+  platform      String
+  type          String
+  text          String
+  mediaUrl      String?
+  mediaType     String?
+  status        String    @default("draft")
+  reviewScore   Int?
+  reviewIssues  String?
+  scheduledAt   DateTime?
+  publishedAt   DateTime?
+  externalId    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  campaign Campaign? @relation(fields: [campaignId], references: [id])
+}
+
+model Ad {
+  id         String   @id @default(cuid())
+  campaignId String?
+  platform   String
+  name       String
+  status     String   @default("draft")
+  budget     Int?
+  targeting  String?
+  creativeId String?
+  externalId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  campaign Campaign? @relation(fields: [campaignId], references: [id])
+}
+
+model Lead {
+  id            String   @id @default(cuid())
+  campaignId    String?
+  source        String
+  name          String?
+  email         String?
+  phone         String?
+  messengerPsid String?
+  status        String   @default("new")
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  campaign Campaign?    @relation(fields: [campaignId], references: [id])
+  messages MessageLog[]
+  bookings Booking[]
+}
+
+model Booking {
+  id         String   @id @default(cuid())
+  leadId     String?
+  campaignId String?
+  checkIn    DateTime?
+  checkOut   DateTime?
+  guests     Int?
+  roomType   String?
+  amount     Int?
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  lead     Lead?     @relation(fields: [leadId], references: [id])
+  campaign Campaign? @relation(fields: [campaignId], references: [id])
+}
+
+// Journal des messages envoyés/reçus sur tous les canaux
+// (email, whatsapp, messenger) pour le nurturing des leads.
+model MessageLog {
+  id         String    @id @default(cuid())
+  leadId     String
+  channel    String    @default("email")
+  direction  String    @default("outbound") // outbound | inbound
+  subject    String?
+  status     String    @default("sent") // sent | failed | received
+  externalId String?
+  sentAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id])
+}
+
+model MediaAsset {
+  id        String   @id @default(cuid())
+  type      String
+  url       String
+  localPath String?
+  source    String?
+  category  String?
+  caption   String?
+  tags      String?
+  createdAt DateTime @default(now())
+}
+
+model ContentTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  platform  String
+  type      String
+  prompt    String
+  createdAt DateTime @default(now())
+}
+
+model Performance {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  platform   String
+  metric     String
+  value      Float
+  recordedAt DateTime @default(now())
+}
+
+// Créneau du calendrier éditorial (fréquence + ton par plateforme)
+model CalendarSlot {
+  id        String   @id @default(cuid())
+  platform  String
+  dayOfWeek Int // 1 = lundi … 7 = dimanche
+  time      String // "HH:MM"
+  type      String // text | photo | video
+  topic     String
+  tone      String?
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

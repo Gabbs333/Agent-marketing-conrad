@@ -1,0 +1,39 @@
+{
+  "name": "hotel-marketing-agent",
+  "version": "1.0.0",
+  "description": "Agent marketing automatisé pour hôtel : génération de contenu, publication Facebook/TikTok, campagnes publicitaires, inbound marketing et conversion en réservations.",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "test:e2e": "tsc -p tsconfig.test.json && node --test dist-all/tests/e2e.test.js",
+    "test:smoke": "npm run build && node --test tests/smoke-auth.test.mjs",
+    "test:llm-mock": "npm run build && node tests/mock-llm.test.js"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9.0.1",
+    "@fastify/multipart": "^8.3.0",
+    "@fastify/static": "^7.0.4",
+    "@prisma/client": "^5.22.0",
+    "dotenv": "^16.4.5",
+    "fastify": "^4.28.1",
+    "nodemailer": "^6.9.14",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/nodemailer": "^6.4.15",
+    "prisma": "^5.22.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0"
+  }
+}

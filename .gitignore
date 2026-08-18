@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+*.log
+
+# Médiathèque générée
+assets/images/*
+assets/videos/*
+assets/audio/*
+!assets/images/.gitkeep
+!assets/videos/.gitkeep
+!assets/audio/.gitkeep
