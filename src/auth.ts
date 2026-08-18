@@ -13,6 +13,10 @@ const PUBLIC_ROUTES = new Set([
   "POST /api/track",
   "GET /api/messaging/webhook",
   "POST /api/messaging/webhook",
+  "GET /api/webhooks/meta",
+  "POST /api/webhooks/meta",
+  "GET /api/webhooks/tiktok",
+  "POST /api/webhooks/tiktok",
   "GET /api/health",
 ]);
 
