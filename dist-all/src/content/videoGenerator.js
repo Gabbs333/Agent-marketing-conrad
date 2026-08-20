@@ -1,27 +1,34 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ttsAvailable = exports.textToSpeech = void 0;
 exports.hasFfmpeg = hasFfmpeg;
 exports.buildSrt = buildSrt;
-exports.textToSpeech = textToSpeech;
 exports.createSlideshow = createSlideshow;
 exports.addAudioAndSubtitles = addAudioAndSubtitles;
 exports.generateVideoFromScript = generateVideoFromScript;
 exports.generateAiVideo = generateAiVideo;
 exports.generateCampaignVideo = generateCampaignVideo;
 const node_child_process_1 = require("node:child_process");
+const promises_1 = require("node:fs/promises");
 const node_util_1 = require("node:util");
 const config_1 = require("../config");
 const db_1 = require("../db");
 const http_1 = require("../lib/http");
 const files_1 = require("../lib/files");
+const tts_1 = require("./tts");
 /**
  * Générateur de vidéos basé sur ffmpeg :
- *  - diaporama avec effet Ken Burns (zoom progressif) à partir d'images ;
- *  - voix off IA (OpenAI TTS) ;
- *  - sous-titres incrustés (SRT) ;
+ *  - diaporama avec effet Ken Burns (zoom progressif) et transitions en fondu ;
+ *  - voix off IA scène par scène (OpenAI / Groq / ElevenLabs via src/content/tts.ts),
+ *    chaque narration étant synchronisée sur la durée exacte de sa scène ;
+ *  - sous-titres incrustés (SRT) alignés sur la voix off ;
  *  - assemblage final (audio + sous-titres).
  */
 const execFileP = (0, node_util_1.promisify)(node_child_process_1.execFile);
+/** Ré-export du TTS multi-fournisseurs (compatibilité + usage externe). */
+var tts_2 = require("./tts");
+Object.defineProperty(exports, "textToSpeech", { enumerable: true, get: function () { return tts_2.textToSpeech; } });
+Object.defineProperty(exports, "ttsAvailable", { enumerable: true, get: function () { return tts_2.ttsAvailable; } });
 let ffmpegAvailable = null;
 async function hasFfmpeg() {
     if (ffmpegAvailable !== null)
@@ -48,6 +55,20 @@ async function ffmpeg(args) {
 function escapeFilterPath(p) {
     return p.replace(/\\/g, "/").replace(/:/g, "\\:").replace(/'/g, "\\'");
 }
+/** Durée (secondes) d'un fichier audio, lue dans la sortie de `ffmpeg -i` (pas besoin de ffprobe). */
+async function audioDuration(path) {
+    try {
+        await execFileP("ffmpeg", ["-hide_banner", "-i", path]);
+    }
+    catch (err) {
+        const stderr = String(err?.stderr ?? err?.message ?? "");
+        const m = stderr.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
+        if (m)
+            return Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]);
+    }
+    throw new Error(`Impossible de déterminer la durée audio de ${path}`);
+}
+const round1 = (n) => Math.round(n * 10) / 10;
 function fmtSrtTime(sec) {
     const ms = Math.round(sec * 1000);
     const h = Math.floor(ms / 3_600_000);
@@ -62,50 +83,51 @@ function buildSrt(segments) {
         .map((seg, i) => `${i + 1}\n${fmtSrtTime(seg.startSec)} --> ${fmtSrtTime(seg.endSec)}\n${seg.text}\n`)
         .join("\n");
 }
-/** Voix off via OpenAI TTS. Renvoie null si non configurée (mode démo). */
-async function textToSpeech(text, opts = {}) {
-    if (config_1.config.demoMode || !config_1.config.openai.apiKey)
-        return null;
-    const res = await fetch("https://api.openai.com/v1/audio/speech", {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${config_1.config.openai.apiKey}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            model: "tts-1",
-            voice: opts.voice ?? config_1.config.openai.ttsVoice,
-            input: text.slice(0, 4000),
-        }),
-    });
-    if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`TTS OpenAI ${res.status}: ${txt.slice(0, 200)}`);
-    }
-    const filename = opts.filename ?? `tts-${Date.now()}.mp3`;
-    return (0, files_1.saveBuffer)(Buffer.from(await res.arrayBuffer()), `assets/audio/${filename}`);
-}
-/** Diaporama Ken Burns à partir d'images (une durée par image possible). */
+/**
+ * Diaporama Ken Burns avec transitions en fondu (xfade) entre les images.
+ * La durée totale de sortie = somme des durées − (n−1) × fondu.
+ */
 async function createSlideshow(input) {
     if (!input.images.length)
         throw new Error("Aucune image fournie pour la vidéo");
     const { width = 1280, height = 720 } = input;
     const fps = 25;
     const durations = input.durations ?? input.images.map(() => 4);
+    const fade = Math.min(input.crossfadeSec ?? 0.4, ...durations.map((d) => d / 2), 1);
     const parts = [];
-    const filters = [];
+    const zooms = [];
     for (let i = 0; i < input.images.length; i++) {
-        parts.push("-loop", "1", "-framerate", String(fps), "-t", String(durations[i]), "-i", input.images[i]);
-        filters.push(`[${i}:v]scale=${width}:${height}:force_original_aspect_ratio=increase,crop=${width}:${height},zoompan=z='min(zoom+0.0015,1.5)':d=1:fps=${fps}:s=${width}x${height}[v${i}]`);
+        // Marge = fade : le flux doit couvrir toute la durée de sa scène + transition
+        parts.push("-loop", "1", "-framerate", String(fps), "-t", String(durations[i] + fade), "-i", input.images[i]);
+        zooms.push(`[${i}:v]scale=${width}:${height}:force_original_aspect_ratio=increase,crop=${width}:${height},zoompan=z='min(zoom+0.0015,1.5)':d=1:fps=${fps}:s=${width}x${height}[v${i}]`);
     }
-    const concat = `${filters.map((_, i) => `[v${i}]`).join("")}concat=n=${input.images.length}:v=1:a=0[outv]`;
+    let filterComplex;
+    let outLabel;
+    if (input.images.length === 1) {
+        filterComplex = zooms[0];
+        outLabel = "[v0]";
+    }
+    else {
+        // Chaîne xfade : le début de la transition i se situe à somme(d0..d(i−1)) − i×fade
+        const xfades = [];
+        let prev = "[v0]";
+        let offset = 0;
+        for (let i = 1; i < input.images.length; i++) {
+            offset += durations[i - 1];
+            const start = Math.max(0, round1(offset - i * fade));
+            xfades.push(`${prev}[v${i}]xfade=transition=fade:duration=${round1(fade)}:offset=${start.toFixed(3)}[x${i}]`);
+            prev = `[x${i}]`;
+        }
+        filterComplex = `${zooms.join(";")};${xfades.join(";")}`;
+        outLabel = `[x${input.images.length - 1}]`;
+    }
     const outPath = `assets/videos/${input.outputName}`;
     await ffmpeg([
         ...parts,
         "-filter_complex",
-        `${filters.join(";")};${concat}`,
+        filterComplex,
         "-map",
-        "[outv]",
+        outLabel,
         "-c:v",
         "libx264",
         "-preset",
@@ -135,9 +157,96 @@ async function addAudioAndSubtitles(input) {
     await ffmpeg(args);
     return outPath;
 }
+// ──────────────────────────────────────────────────────────────
+// Voix off scène par scène : chaque narration est générée, mesurée,
+// puis calée (silence initial + remplissage) sur la durée de sa scène.
+// ──────────────────────────────────────────────────────────────
+/** Silence avant la narration d'une scène (souffle visuel). */
+const VO_PAD_BEFORE = 0.45;
+/** Silence après la narration (respiration avant la transition). */
+const VO_PAD_AFTER = 0.55;
+/** Calle une narration sur la durée exacte de sa scène (silence avant + après). */
+async function makeVoiceChunk(src, durationSec, outRel) {
+    await ffmpeg([
+        "-i",
+        src,
+        "-af",
+        `adelay=delays=${Math.round(VO_PAD_BEFORE * 1000)}:all=1,apad`,
+        "-t",
+        durationSec.toFixed(2),
+        "-ar",
+        "44100",
+        "-ac",
+        "2",
+        "-c:a",
+        "pcm_s16le",
+        "-y",
+        (0, files_1.assetPath)(outRel),
+    ]);
+    return outRel;
+}
+/** Piste silencieuse pour une scène sans narration. */
+async function makeSilenceChunk(durationSec, outRel) {
+    await ffmpeg([
+        "-f",
+        "lavfi",
+        "-i",
+        "anullsrc=r=44100:cl=stereo",
+        "-t",
+        durationSec.toFixed(2),
+        "-c:a",
+        "pcm_s16le",
+        "-y",
+        (0, files_1.assetPath)(outRel),
+    ]);
+    return outRel;
+}
+/** Concatène les chunks audio (même format : pcm 44,1 kHz stéréo). */
+async function concatAudioChunks(chunks, outRel) {
+    const outAbs = (0, files_1.assetPath)(outRel);
+    if (chunks.length === 1) {
+        await (0, promises_1.copyFile)((0, files_1.assetPath)(chunks[0]), outAbs);
+        return outRel;
+    }
+    await ffmpeg([
+        ...chunks.flatMap((c) => ["-i", (0, files_1.assetPath)(c)]),
+        "-filter_complex",
+        `${chunks.map((_, i) => `[${i}:a]`).join("")}concat=n=${chunks.length}:v=0:a=1[outa]`,
+        "-map",
+        "[outa]",
+        "-c:a",
+        "pcm_s16le",
+        "-y",
+        outAbs,
+    ]);
+    return outRel;
+}
+/** Décode le script en segments montables (hook, scènes, CTA). */
+function buildSegments(script, images) {
+    const scenes = script.scenes.length
+        ? script.scenes
+        : [{ visual: "", narration: script.title, durationSec: 4 }];
+    const img = (i) => images[i % images.length];
+    const segments = [];
+    if (script.hook?.trim()) {
+        segments.push({ text: script.hook.trim(), imagePath: img(0), minDuration: 2.5 });
+    }
+    scenes.forEach((s, i) => segments.push({
+        text: (s.narration ?? "").trim(),
+        imagePath: img(i),
+        minDuration: Math.max(2, Math.round(s.durationSec || 4)),
+    }));
+    if (script.cta?.trim()) {
+        segments.push({ text: script.cta.trim(), imagePath: img(images.length - 1), minDuration: 2.5 });
+    }
+    return segments;
+}
 /**
- * Pipeline complet : script → voix off → diaporama → sous-titres → vidéo finale.
- * Les images sont cyclées si moins nombreuses que les scènes.
+ * Pipeline complet : script → voix off scène par scène → diaporama
+ * (fondu enchaîné) → sous-titres synchronisés → vidéo finale.
+ *
+ * `withVoice` (défaut : auto) active la voix off dès qu'un fournisseur
+ * TTS est configuré. Chaque scène dure au moins le temps de sa narration.
  */
 async function generateVideoFromScript(input) {
     if (!(await hasFfmpeg())) {
@@ -146,43 +255,90 @@ async function generateVideoFromScript(input) {
     if (!input.images.length)
         throw new Error("Au moins une image est nécessaire pour la vidéo");
     const { script } = input;
-    const scenes = script.scenes.length ? script.scenes : [{ visual: "", narration: script.title, durationSec: 4 }];
-    const images = scenes.map((_, i) => input.images[i % input.images.length]);
-    const durations = scenes.map((s) => Math.max(2, Math.round(s.durationSec || 4)));
     const name = input.outputName ?? `video-${(0, files_1.slugify)(script.title)}-${Date.now()}.mp4`;
     const baseName = name.replace(/\.mp4$/i, "");
-    // 1. Diaporama
+    const segments = buildSegments(script, input.images);
+    // ── Résolution de la voix off ──
+    const explicitVoice = input.withVoice === true;
+    const voiceWanted = input.withVoice ?? (0, tts_1.ttsAvailable)();
+    let voice = voiceWanted;
+    if (voiceWanted && !(0, tts_1.ttsAvailable)()) {
+        if (explicitVoice) {
+            throw new Error("Voix off demandée mais aucun fournisseur TTS n'est configuré (TTS_PROVIDER, GROQ_API_KEY, OPENAI_API_KEY ou ELEVENLABS_API_KEY).");
+        }
+        voice = false;
+    }
+    if (voice) {
+        try {
+            for (let i = 0; i < segments.length; i++) {
+                const seg = segments[i];
+                if (!seg.text)
+                    continue;
+                const res = await (0, tts_1.textToSpeech)(seg.text, { filename: `${baseName}-vo-${i}.wav` });
+                if (!res) {
+                    // Fournisseur disparu en cours de route (ex. clé absente)
+                    if (explicitVoice)
+                        throw new Error("Voix off demandée mais aucun fournisseur TTS disponible.");
+                    voice = false;
+                    break;
+                }
+                seg.voiceFile = res.path;
+                seg.audioDuration = await audioDuration(res.path);
+            }
+        }
+        catch (err) {
+            if (explicitVoice)
+                throw err;
+            console.error("[video] Voix off indisponible, montage sans narration :", err);
+            voice = false;
+        }
+    }
+    if (!voice)
+        segments.forEach((s) => ((s.voiceFile = undefined), (s.audioDuration = undefined)));
+    // ── Durées des scènes (la narration pilote la durée) ──
+    const durations = segments.map((seg) => {
+        if (voice && seg.voiceFile && seg.audioDuration != null) {
+            return Math.max(seg.minDuration, round1(seg.audioDuration + VO_PAD_BEFORE + VO_PAD_AFTER));
+        }
+        return seg.minDuration;
+    });
+    const fade = Math.min(0.4, ...durations.map((d) => d / 2), 1);
+    // Compense les fondus enchaînés : la dernière scène absorbe le temps perdu
+    // pour que piste audio et vidéo finissent exactement ensemble.
+    durations[durations.length - 1] += round1((segments.length - 1) * fade);
+    // ── 1. Diaporama Ken Burns + fondus enchaînés ──
     const slideshowPath = await createSlideshow({
-        images,
+        images: segments.map((s) => s.imagePath),
         durations,
         outputName: `${baseName}-slides.mp4`,
+        crossfadeSec: fade,
     });
-    // 2. Voix off
-    const narration = [script.hook, ...scenes.map((s) => s.narration), script.cta]
-        .filter(Boolean)
-        .join(" ");
+    // ── 2. Piste audio : chaque narration calée sur sa scène ──
     let audioPath = null;
-    if (input.withVoice) {
-        audioPath = await textToSpeech(narration, { filename: `${baseName}-vo.mp3` });
+    if (voice) {
+        const chunks = [];
+        for (let i = 0; i < segments.length; i++) {
+            const seg = segments[i];
+            chunks.push(seg.voiceFile
+                ? await makeVoiceChunk(seg.voiceFile, durations[i], `${baseName}-vo-chunk-${i}.wav`)
+                : await makeSilenceChunk(durations[i], `${baseName}-vo-chunk-${i}.wav`));
+        }
+        audioPath = await concatAudioChunks(chunks, `${baseName}-vo.wav`);
     }
-    // 3. Sous-titres (hook + scènes, timings cumulés)
-    const segments = [];
+    // ── 3. Sous-titres synchronisés (alignés sur la voix off) ──
+    const srtSegments = [];
     let cursor = 0;
-    if (script.hook) {
-        const d = 2.5;
-        segments.push({ text: script.hook, startSec: cursor, endSec: cursor + d });
-        cursor += d;
+    for (let i = 0; i < segments.length; i++) {
+        const seg = segments[i];
+        if (seg.text) {
+            const start = voice && seg.audioDuration != null ? cursor + VO_PAD_BEFORE : cursor;
+            const end = voice && seg.audioDuration != null ? start + seg.audioDuration : cursor + durations[i];
+            srtSegments.push({ text: seg.text, startSec: round1(start), endSec: round1(end) });
+        }
+        cursor += durations[i];
     }
-    for (const s of scenes) {
-        const d = Math.max(2, Math.round(s.durationSec || 4));
-        segments.push({ text: s.narration, startSec: cursor, endSec: cursor + d });
-        cursor += d;
-    }
-    if (script.cta) {
-        segments.push({ text: script.cta, startSec: cursor, endSec: cursor + 2.5 });
-    }
-    const srtPath = await (0, files_1.saveText)(buildSrt(segments), `assets/videos/${baseName}.srt`);
-    // 4. Assemblage final
+    const srtPath = await (0, files_1.saveText)(buildSrt(srtSegments), `assets/videos/${baseName}.srt`);
+    // ── 4. Assemblage final ──
     const finalPath = await addAudioAndSubtitles({
         videoPath: slideshowPath,
         outputName: name,
@@ -195,7 +351,7 @@ async function generateVideoFromScript(input) {
             type: "video",
             url,
             localPath: finalPath,
-            tags: `title:${script.title.slice(0, 120)};generated`,
+            tags: `title:${script.title.slice(0, 120)};generated;voiceover`,
         },
     });
     return { id: asset.id, url, localPath: finalPath, script };
@@ -297,7 +453,7 @@ async function generateAiVideo(input) {
 }
 /**
  * Dispatcheur de génération vidéo d'une campagne :
- *  - VIDEO_PROVIDER=ffmpeg : diaporama Ken Burns + sous-titres (local, défaut) ;
+ *  - VIDEO_PROVIDER=ffmpeg : diaporama Ken Burns + fondus + voix off + sous-titres (local, défaut) ;
  *  - replicate / fal      : vidéo IA text-to-video ;
  *  - ai                   : tente l'IA puis se replie sur ffmpeg.
  */

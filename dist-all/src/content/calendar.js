@@ -5,7 +5,6 @@ exports.getCalendar = getCalendar;
 exports.upsertSlot = upsertSlot;
 exports.deleteSlot = deleteSlot;
 exports.generateFromCalendar = generateFromCalendar;
-const config_1 = require("../config");
 const db_1 = require("../db");
 const textGenerator_1 = require("./textGenerator");
 const videoGenerator_1 = require("./videoGenerator");
@@ -132,7 +131,6 @@ async function generateFromCalendar(days = 7) {
                     const video = await (0, videoGenerator_1.generateCampaignVideo)({
                         script,
                         images: images.map((i) => i.localPath),
-                        withVoice: !config_1.config.demoMode,
                     });
                     mediaUrl = video.url;
                     mediaType = "video";

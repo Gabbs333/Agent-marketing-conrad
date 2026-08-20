@@ -45,7 +45,6 @@ import { deleteSlot,
   getCalendar,
   upsertSlot,
 } from "../content/calendar";
-import { handleMetaWebhook, handleTikTokWebhook } from "../inbound/webhookHandler";
 import * as metaAds from "../ads/metaAds";
 import * as tiktokAds from "../ads/tiktokAds";
 
@@ -346,30 +345,43 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   // ─── Webhooks (Meta & TikTok) ──────────────────────────────
+  // Canonique : Meta valide ici le verify token puis envoie les événements.
   app.get("/webhooks/meta", async (req, reply) => {
-    const query = req.query as any;
-    if (query["hub.mode"] === "subscribe" && query["hub.verify_token"] === config.webhook.verifyToken) {
-      return reply.send(query["hub.challenge"]);
+    const q = req.query as { "hub.mode"?: string; "hub.verify_token"?: string; "hub.challenge"?: string };
+    const token = config.webhook.verifyToken;
+    if (!token) {
+      return reply.code(400).send({ error: "WEBHOOK_VERIFY_TOKEN non configuré" });
     }
-    return reply.code(403).send("Forbidden");
+    if (q["hub.mode"] === "subscribe" && q["hub.verify_token"] === token) {
+      return reply.type("text/plain").send(q["hub.challenge"] ?? "");
+    }
+    return reply.code(403).send({ error: "Vérification du webhook échouée" });
   });
 
   app.post("/webhooks/meta", async (req, reply) => {
-    // Traitement asynchrone des messages/leads
-    // handleMetaWebhook(req.body);
-    return reply.code(200).send("EVENT_RECEIVED");
+    try {
+      const stats = await handleWebhookEvent(req.body);
+      return { received: true, ...stats };
+    } catch (err) {
+      console.error("[webhook meta] Erreur de traitement :", err);
+      return reply.code(500).send({ error: (err as Error).message });
+    }
   });
 
-  app.get("/webhooks/tiktok", async (req, reply) => {
-    // TikTok utilise généralement des headers de signature pour la vérification
-    // On peut répondre 200 par défaut si configuré, ou implémenter la vérification HMAC ici
+  app.get("/webhooks/tiktok", async (_req, reply) => {
+    // TikTok valide l'endpoint via un challenge signé (HMAC) — implémenté lors
+    // de la connexion réelle de TikTok Business.
     return reply.code(200).send("OK");
   });
 
   app.post("/webhooks/tiktok", async (req, reply) => {
-    // handleTikTokWebhook(req.body);
+    console.log("[webhook] Événement TikTok reçu :", JSON.stringify(req.body).slice(0, 500));
     return reply.code(200).send("EVENT_RECEIVED");
   });
+
+  // ─── Génération de contenu ──────────────────────────────────
+  // Tons éditoriaux disponibles
+  app.get("/content/tones", async () => TONE_PRESETS);
   app.post("/content/text", async (req, reply) => {
     const p = parse(textSchema, req.body);
     if (!p.ok) return reply.code(400).send({ error: p.error });

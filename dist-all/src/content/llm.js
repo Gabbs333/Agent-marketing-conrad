@@ -6,7 +6,7 @@ exports.activeLlmLabel = activeLlmLabel;
 const config_1 = require("../config");
 const http_1 = require("../lib/http");
 const COMPAT_PROVIDERS = [
-    { name: "groq", key: config_1.config.groq.apiKey, baseUrl: "https://api.groq.com/openai/v1", defaultModel: "llama-3.3-70b-versatile" },
+    { name: "groq", key: config_1.config.groq.apiKey, baseUrl: "https://api.groq.com/openai/v1", defaultModel: "openai/gpt-oss-120b" },
     { name: "mistral", key: config_1.config.mistral.apiKey, baseUrl: "https://api.mistral.ai/v1", defaultModel: "mistral-large-latest" },
     { name: "openrouter", key: config_1.config.openrouter.apiKey, baseUrl: "https://openrouter.ai/api/v1", defaultModel: "meta-llama/llama-3.3-70b-instruct" },
     { name: "deepseek", key: config_1.config.deepseek.apiKey, baseUrl: "https://api.deepseek.com/v1", defaultModel: "deepseek-chat" },

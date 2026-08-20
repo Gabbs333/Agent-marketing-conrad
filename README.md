@@ -139,6 +139,8 @@ Routes volontairement **publiques** (nécessaires au fonctionnement) :
 | `POST /api/leads` | Capture de leads (landing page) |
 | `POST /api/track` | Tracking de visites |
 | `GET/POST /api/messaging/webhook` | Webhook Meta (vérifié par token) |
+| `GET/POST /api/webhooks/meta` | Webhook Meta **canonique** (vérifié par token) |
+| `GET/POST /api/webhooks/tiktok` | Webhook TikTok Business |
 
 Le dashboard `/admin` demande la clé au premier appel et la conserve en `localStorage`.
 
@@ -162,7 +164,19 @@ Le dashboard `/admin` demande la clé au premier appel et la conserve en `localS
 ### Configuration du webhook Meta
 
 Dans le Meta Developer Dashboard, abonnez votre app aux événements `messages` (WhatsApp) et `messages`, `messaging_referrals`, `messaging_optins` (Messenger), avec l'URL :
-`https://votre-domaine.com/api/messaging/webhook` et le token `WEBHOOK_VERIFY_TOKEN`.
+`https://votre-domaine.com/api/webhooks/meta` et le token `WEBHOOK_VERIFY_TOKEN`.
+
+### Cohabitation avec un agent réceptionniste (routeur)
+
+Meta n'autorise qu'**UN seul webhook par numéro WhatsApp**. Si un autre agent (ex. un réceptionniste) utilise déjà ce numéro, activez le routeur de cohabitation :
+
+1. Dans le Meta Dashboard, pointez le webhook du numéro vers `https://votre-domaine.com/api/webhooks/meta` (l'agent marketing devient le répartiteur central).
+2. Ajoutez `RECEPTIONIST_WEBHOOK_URL=https://url-du-receptionniste.com/son-webhook` dans l'environnement.
+3. L'agent marketing garde les messages à **intention marketing** (lead connu, clic publicitaire, mots-clés : réservation, prix, offre, disponibilité, séjour…), et **transfère tout le reste** au réceptionniste (payload re-signé HMAC-SHA256 avec `FB_APP_SECRET`, header `x-forwarded-by`, timeout 5 s).
+4. **Filet de sécurité** : si le réceptionniste est indisponible, le message est traité localement pour ne jamais être perdu.
+5. L'agent réceptionniste continue d'**envoyer** ses messages normalement (même numéro, même token) — seul son webhook de réception est désactivé côté Meta.
+
+Sans `RECEPTIONIST_WEBHOOK_URL`, tout est traité par l'agent marketing (comportement par défaut).
 
 ### Séquence de nurturing
 

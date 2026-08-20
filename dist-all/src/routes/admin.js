@@ -109,7 +109,7 @@ const videoSchema = zod_1.z.object({
     topic: zod_1.z.string().min(1),
     images: zod_1.z.array(zod_1.z.string()).optional(),
     durationSec: zod_1.z.number().int().positive().optional(),
-    withVoice: zod_1.z.boolean().default(false),
+    withVoice: zod_1.z.boolean().optional(),
     mode: zod_1.z.enum(["auto", "ffmpeg", "ai", "replicate", "fal"]).optional(),
 });
 const emailContentSchema = zod_1.z.object({
@@ -318,6 +318,38 @@ async function adminRoutes(app) {
             },
         });
         return campaign;
+    });
+    // ─── Webhooks (Meta & TikTok) ──────────────────────────────
+    // Canonique : Meta valide ici le verify token puis envoie les événements.
+    app.get("/webhooks/meta", async (req, reply) => {
+        const q = req.query;
+        const token = config_1.config.webhook.verifyToken;
+        if (!token) {
+            return reply.code(400).send({ error: "WEBHOOK_VERIFY_TOKEN non configuré" });
+        }
+        if (q["hub.mode"] === "subscribe" && q["hub.verify_token"] === token) {
+            return reply.type("text/plain").send(q["hub.challenge"] ?? "");
+        }
+        return reply.code(403).send({ error: "Vérification du webhook échouée" });
+    });
+    app.post("/webhooks/meta", async (req, reply) => {
+        try {
+            const stats = await (0, webhooks_1.handleWebhookEvent)(req.body);
+            return { received: true, ...stats };
+        }
+        catch (err) {
+            console.error("[webhook meta] Erreur de traitement :", err);
+            return reply.code(500).send({ error: err.message });
+        }
+    });
+    app.get("/webhooks/tiktok", async (_req, reply) => {
+        // TikTok valide l'endpoint via un challenge signé (HMAC) — implémenté lors
+        // de la connexion réelle de TikTok Business.
+        return reply.code(200).send("OK");
+    });
+    app.post("/webhooks/tiktok", async (req, reply) => {
+        console.log("[webhook] Événement TikTok reçu :", JSON.stringify(req.body).slice(0, 500));
+        return reply.code(200).send("EVENT_RECEIVED");
     });
     // ─── Génération de contenu ──────────────────────────────────
     // Tons éditoriaux disponibles

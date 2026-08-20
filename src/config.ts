@@ -25,7 +25,7 @@ export const config = {
   // ─── IA : LLM (textes) ─────────────────────────────────────
   llm: {
     provider: get("LLM_PROVIDER", "auto"),
-    model: get("LLM_MODEL", "gpt-4o-mini"),
+    model: get("LLM_MODEL", ""), // vide = modèle par défaut du fournisseur choisi
     baseUrl: get("LLM_BASE_URL"),
     apiKey: get("LLM_API_KEY"),
   },
@@ -103,6 +103,11 @@ export const config = {
   /** Webhooks Meta (WhatsApp Cloud API + Messenger). */
   webhook: {
     verifyToken: get("WEBHOOK_VERIFY_TOKEN"),
+  },
+
+  /** Routeur de cohabitation multi-agents sur le même numéro WhatsApp. */
+  router: {
+    receptionistWebhookUrl: get("RECEPTIONIST_WEBHOOK_URL"),
   },
 
   /** WhatsApp Business (Meta Cloud API). */

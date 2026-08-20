@@ -181,7 +181,6 @@ async function runCampaign(campaignId, opts = {}) {
             const video = await (0, videoGenerator_1.generateCampaignVideo)({
                 script,
                 images,
-                withVoice: !config_1.config.demoMode,
             });
             await db_1.prisma.post.update({
                 where: { id: ttPost.id },

@@ -64,6 +64,14 @@ exports.config = {
         replicateModel: get("REPLICATE_VIDEO_MODEL", "wan-video/wan-2.2-5b"),
         falModel: get("FAL_VIDEO_MODEL", "fal-ai/wan/v2.2/5b/text-to-video"),
     },
+    // ─── IA : voix off (TTS) ───────────────────────────────────
+    tts: {
+        provider: get("TTS_PROVIDER", "auto"), // auto | openai | groq | elevenlabs
+        voice: get("TTS_VOICE", "hannah"),
+        groqModel: get("TTS_GROQ_MODEL", "canopylabs/orpheus-v1-english"),
+        elevenlabsVoiceId: get("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB"),
+    },
+    elevenlabs: { apiKey: get("ELEVENLABS_API_KEY") },
     // ─── Réseaux sociaux & publicité ───────────────────────────
     facebook: {
         pageId: get("FB_PAGE_ID"),
@@ -87,6 +95,10 @@ exports.config = {
     /** Webhooks Meta (WhatsApp Cloud API + Messenger). */
     webhook: {
         verifyToken: get("WEBHOOK_VERIFY_TOKEN"),
+    },
+    /** Routeur de cohabitation multi-agents sur le même numéro WhatsApp. */
+    router: {
+        receptionistWebhookUrl: get("RECEPTIONIST_WEBHOOK_URL"),
     },
     /** WhatsApp Business (Meta Cloud API). */
     whatsapp: {
