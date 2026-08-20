@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendTemplateMessage = sendTemplateMessage;
 exports.sendTextMessage = sendTextMessage;
 exports.sendQuickReply = sendQuickReply;
+exports.sendReadReceipt = sendReadReceipt;
 const config_1 = require("../config");
 const http_1 = require("../lib/http");
 /**
@@ -89,5 +90,23 @@ async function sendTextMessage(input) {
  */
 async function sendQuickReply(input) {
     return sendTextMessage({ to: input.to, text: input.text });
+}
+/** Accusé de lecture (coches bleues côté client WhatsApp). */
+async function sendReadReceipt(input) {
+    if (config_1.config.demoMode)
+        return;
+    const { phoneNumberId, accessToken } = requireConfig();
+    await (0, http_1.httpJson)(`${GRAPH_URL}/${phoneNumberId}/messages`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            messaging_product: "whatsapp",
+            status: "read",
+            message_id: input.messageId,
+        }),
+    });
 }
 //# sourceMappingURL=whatsapp.js.map

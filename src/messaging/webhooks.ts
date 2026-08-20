@@ -1,5 +1,7 @@
 import { handleInboundMessage, handleReferral } from "../inbound/leadCapture";
 import { classifyMessage, forwardToReceptionist, routerEnabled } from "./router";
+import * as whatsapp from "./whatsapp";
+import * as messenger from "./messenger";
 
 /**
  * Traitement des webhooks Meta (WhatsApp Cloud API + Messenger).
@@ -61,8 +63,13 @@ export async function handleWebhookEvent(body: any): Promise<WebhookStats> {
             channel: "whatsapp",
             senderId: String(msg.from),
             text: msg.text?.body ?? "",
+            messageId: msg.id ? String(msg.id) : undefined,
           });
           events++;
+          // Accusé de lecture (coches bleues côté client)
+          await whatsapp
+            .sendReadReceipt({ to: String(msg.from), messageId: String(msg.id) })
+            .catch(() => {});
         } catch (err) {
           console.error("[webhook] WhatsApp entrant non traité :", err);
         }
@@ -131,8 +138,10 @@ export async function handleWebhookEvent(body: any): Promise<WebhookStats> {
             channel: "messenger",
             senderId: String(psid),
             text: event.message.text,
+            messageId: event.message.mid ? String(event.message.mid) : undefined,
           });
           events++;
+          await messenger.markSeen(String(psid)).catch(() => {});
         } else if (event.messaging_referrals || event.referral) {
           const ref = event.messaging_referrals?.[0]?.ref ?? event.referral?.ref ?? "";
           await handleReferral({ psid: String(psid), ref, name: event.sender?.name });

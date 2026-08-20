@@ -115,3 +115,24 @@ export async function sendQuickReply(input: {
 }): Promise<MessageResult> {
   return sendTextMessage({ to: input.to, text: input.text });
 }
+
+/** Accusé de lecture (coches bleues côté client WhatsApp). */
+export async function sendReadReceipt(input: {
+  to: string;
+  messageId: string;
+}): Promise<void> {
+  if (config.demoMode) return;
+  const { phoneNumberId, accessToken } = requireConfig();
+  await httpJson(`${GRAPH_URL}/${phoneNumberId}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      status: "read",
+      message_id: input.messageId,
+    }),
+  });
+}

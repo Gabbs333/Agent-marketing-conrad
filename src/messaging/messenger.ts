@@ -120,3 +120,17 @@ export function buildRefUrl(campaignId: string): string {
   }
   return `https://m.me/${pageId}?ref=campaign_${campaignId}`;
 }
+
+/** Marque la conversation comme lue (coches bleues côté Messenger). */
+export async function markSeen(psid: string): Promise<void> {
+  if (config.demoMode) return;
+  const { token } = requireConfig();
+  await httpJson(`${GRAPH_URL}/me/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      recipient: { id: psid },
+      sender_action: "mark_seen",
+    }),
+  });
+}

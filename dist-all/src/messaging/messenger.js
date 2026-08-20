@@ -4,6 +4,7 @@ exports.sendText = sendText;
 exports.requestOneTimeNotification = requestOneTimeNotification;
 exports.sendOneTimeNotification = sendOneTimeNotification;
 exports.buildRefUrl = buildRefUrl;
+exports.markSeen = markSeen;
 const config_1 = require("../config");
 const http_1 = require("../lib/http");
 /**
@@ -105,5 +106,19 @@ function buildRefUrl(campaignId) {
         throw new Error("FB_PAGE_ID manquant pour générer un lien m.me");
     }
     return `https://m.me/${pageId}?ref=campaign_${campaignId}`;
+}
+/** Marque la conversation comme lue (coches bleues côté Messenger). */
+async function markSeen(psid) {
+    if (config_1.config.demoMode)
+        return;
+    const { token } = requireConfig();
+    await (0, http_1.httpJson)(`${GRAPH_URL}/me/messages`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+            recipient: { id: psid },
+            sender_action: "mark_seen",
+        }),
+    });
 }
 //# sourceMappingURL=messenger.js.map

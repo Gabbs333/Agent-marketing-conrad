@@ -1,8 +1,43 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.handleWebhookEvent = handleWebhookEvent;
 const leadCapture_1 = require("../inbound/leadCapture");
 const router_1 = require("./router");
+const whatsapp = __importStar(require("./whatsapp"));
+const messenger = __importStar(require("./messenger"));
 async function handleWebhookEvent(body) {
     const entries = body?.entry ?? [];
     let events = 0;
@@ -44,8 +79,13 @@ async function handleWebhookEvent(body) {
                         channel: "whatsapp",
                         senderId: String(msg.from),
                         text: msg.text?.body ?? "",
+                        messageId: msg.id ? String(msg.id) : undefined,
                     });
                     events++;
+                    // Accusé de lecture (coches bleues côté client)
+                    await whatsapp
+                        .sendReadReceipt({ to: String(msg.from), messageId: String(msg.id) })
+                        .catch(() => { });
                 }
                 catch (err) {
                     console.error("[webhook] WhatsApp entrant non traité :", err);
@@ -117,8 +157,10 @@ async function handleWebhookEvent(body) {
                         channel: "messenger",
                         senderId: String(psid),
                         text: event.message.text,
+                        messageId: event.message.mid ? String(event.message.mid) : undefined,
                     });
                     events++;
+                    await messenger.markSeen(String(psid)).catch(() => { });
                 }
                 else if (event.messaging_referrals || event.referral) {
                     const ref = event.messaging_referrals?.[0]?.ref ?? event.referral?.ref ?? "";

@@ -148,4 +148,18 @@ export const config = {
   review: {
     minScore: Number(get("REVIEW_MIN_SCORE", "40")),
   },
+
+  /** Agent conversationnel marketing (Surya). */
+  agent: {
+    name: get("AGENT_NAME", "Surya"),
+    escalationPhones: get("ESCALATION_PHONES", "679769525,640513680")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  },
+
+  /** Offre marketing en cours, proposée aux leads chauds/tièdes. */
+  marketing: {
+    offer: get("MARKETING_OFFER", "10% de remise"),
+  },
 };

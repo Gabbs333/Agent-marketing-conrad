@@ -137,6 +137,17 @@
   .lcard .contact { font-size:.76rem; color:var(--muted); margin:2px 0 8px; word-break:break-all; }
   .lcard .row { display:flex; gap:6px; flex-wrap:wrap; }
 
+  /* ── Température des leads (badges maison, vocabulaire d'hôtellerie) ── */
+  .temp { display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; font-size:.71rem; font-weight:600; letter-spacing:.02em; white-space:nowrap; }
+  .temp i.dot { width:7px; height:7px; border-radius:50%; flex:none; }
+  .temp .score { font-weight:500; opacity:.75; font-size:.67rem; }
+  .temp.hot { background:linear-gradient(135deg,#FAE9E2,#F5D5C6); color:#9A4427; border:1px solid #EBC3AE; }
+  .temp.hot i.dot { background:#D96A3B; box-shadow:0 0 0 3px rgba(217,106,59,.16); }
+  .temp.warm { background:#FAF2DF; color:#8F6A1D; border:1px solid #EBD9AC; }
+  .temp.warm i.dot { background:#D9A73B; box-shadow:0 0 0 3px rgba(217,167,59,.14); }
+  .temp.cold { background:#E9EFF4; color:#46617A; border:1px solid #C9D7E2; }
+  .temp.cold i.dot { background:#6E8CA3; }
+
   /* ── Modales ── */
   .modal { display:none; position:fixed; inset:0; background:#070F1C99; backdrop-filter:blur(6px); z-index:50; align-items:center; justify-content:center; padding:24px; }
   .modal.open { display:flex; }
@@ -352,7 +363,7 @@
             <button class="btn dark" id="nurtureAll">💬 Nurturing</button>
             <button class="btn ghost" id="viewToggle">Basculer : Pipeline</button>
           </div>
-          <div id="leadsList"><div class="tbl-wrap"><table id="leadsTable"><thead><tr><th>Nom</th><th>Contact</th><th>Canal</th><th>Source</th><th>Statut</th><th>Messages</th><th>Actions</th></tr></thead><tbody></tbody></table></div></div>
+          <div id="leadsList"><div class="tbl-wrap"><table id="leadsTable"><thead><tr><th>Nom</th><th>Contact</th><th>Canal</th><th>Source</th><th>Statut</th><th>Température</th><th>Messages</th><th>Actions</th></tr></thead><tbody></tbody></table></div></div>
           <div id="leadsPipeline" style="display:none"><div class="pipeline" id="pipeline"></div></div>
         </div>
       </section>
@@ -1013,6 +1024,12 @@ async function loadLeads() {
   renderLeads();
 }
 function leadChannel(l) { return l.messengerPsid ? "📩 Messenger" : l.phone ? "💬 WhatsApp" : l.email ? "✉️ Email" : "—"; }
+function tempBadge(l) {
+  if (!l.temperature) return '<span class="muted">—</span>';
+  const map = { hot: ["Prêt à réserver", "hot"], warm: ["Intéressé", "warm"], cold: ["À cultiver", "cold"] };
+  const [label, cls] = map[l.temperature] || [l.temperature, ""];
+  return `<span class="temp ${cls}"><i class="dot"></i>${label}${l.score != null ? `<span class="score">· ${l.score}</span>` : ""}</span>`;
+}
 function renderLeads() {
   const q = ($("#leadSearch").value || "").toLowerCase();
   const list = window.__leads.filter((l) => !q || [l.name, l.email, l.phone, l.source].filter(Boolean).join(" ").toLowerCase().includes(q));
@@ -1026,12 +1043,13 @@ function renderLeads() {
         <td>${leadChannel(l)}</td>
         <td><div class="muted">${esc(l.source)}</div>${l.campaign ? `<div class="muted">${esc(l.campaign.name)}</div>` : ""}</td>
         <td>${badge(l.status)}</td>
+        <td>${tempBadge(l)}</td>
         <td>${l._count.messages}</td>
         <td><div class="row">
           ${l.status !== "booked" ? `<button class="btn primary small" onclick="convertLead('${l.id}')">Convertir</button>` : ""}
           <button class="btn ghost small" onclick="messageLead('${l.id}')">Message</button>
         </div></td>
-      </tr>`).join("") || '<tr><td colspan="7"><div class="empty"><div class="big">👥</div>Aucun lead pour le moment.</div></td></tr>';
+      </tr>`).join("") || '<tr><td colspan="8"><div class="empty"><div class="big">👥</div>Aucun lead pour le moment.</div></td></tr>';
   } else {
     $("#leadsList").style.display = "none";
     $("#leadsPipeline").style.display = "block";
@@ -1042,6 +1060,7 @@ function renderLeads() {
         <div class="lcard">
           <div class="name">${esc(l.name || "Sans nom")}</div>
           <div class="contact">${esc(l.email || l.phone || l.messengerPsid || "")} · ${leadChannel(l)}</div>
+          <div style="margin-bottom:8px">${tempBadge(l)}</div>
           <div class="row">
             ${status !== "booked" ? `<button class="btn primary small" onclick="convertLead('${l.id}')">Convertir</button>` : ""}
             <button class="btn ghost small" onclick="messageLead('${l.id}')">💬</button>

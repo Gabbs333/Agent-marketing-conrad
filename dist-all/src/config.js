@@ -22,7 +22,7 @@ exports.config = {
     // ─── IA : LLM (textes) ─────────────────────────────────────
     llm: {
         provider: get("LLM_PROVIDER", "auto"),
-        model: get("LLM_MODEL", "gpt-4o-mini"),
+        model: get("LLM_MODEL", ""), // vide = modèle par défaut du fournisseur choisi
         baseUrl: get("LLM_BASE_URL"),
         apiKey: get("LLM_API_KEY"),
     },
@@ -133,6 +133,18 @@ exports.config = {
     /** Relecture IA des brouillons avant publication. */
     review: {
         minScore: Number(get("REVIEW_MIN_SCORE", "40")),
+    },
+    /** Agent conversationnel marketing (Surya). */
+    agent: {
+        name: get("AGENT_NAME", "Surya"),
+        escalationPhones: get("ESCALATION_PHONES", "679769525,640513680")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+    },
+    /** Offre marketing en cours, proposée aux leads chauds/tièdes. */
+    marketing: {
+        offer: get("MARKETING_OFFER", "10% de remise"),
     },
 };
 //# sourceMappingURL=config.js.map

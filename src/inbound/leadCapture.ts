@@ -1,5 +1,7 @@
 import { config } from "../config";
 import { prisma } from "../db";
+import { analyzeInbound, escalationMessage, needsHumanEscalation } from "../content/chatReply";
+import { scoreLead } from "./scoring";
 import { sendAutoReply, sendNurtureMessage } from "./messaging";
 
 /**
@@ -116,6 +118,11 @@ export async function nurtureLeads(): Promise<{ sent: number }> {
 
   let sent = 0;
   for (const lead of leads) {
+    // Scoring à jour (température hot/warm/cold)
+    await scoreLead(lead.id).catch((err) =>
+      console.error(`[leads] Scoring impossible pour ${lead.id} :`, err),
+    );
+
     const stage = lead.messages.length;
     if (stage > STAGE_MAX) {
       await prisma.lead.update({ where: { id: lead.id }, data: { status: "nurturing" } });
@@ -135,12 +142,23 @@ export async function nurtureLeads(): Promise<{ sent: number }> {
 
 const STAGE_MAX = 3;
 
-/** Message entrant WhatsApp/Messenger : crée le lead s'il n'existe pas, répond automatiquement. */
+/** Message entrant WhatsApp/Messenger : crée le lead s'il n'existe pas, répond automatiquement.
+ * `messageId` (id Meta du message) permet d'éviter les doublons lors des retries de webhook. */
 export async function handleInboundMessage(input: {
   channel: "whatsapp" | "messenger";
   senderId: string;
   text: string;
+  messageId?: string;
 }): Promise<any> {
+  // Déduplication : Meta peut renvoyer le même événement si la réponse tarde
+  if (input.messageId) {
+    const dup = await prisma.messageLog.findFirst({
+      where: { externalId: input.messageId, direction: "inbound" },
+      select: { id: true },
+    });
+    if (dup) return null;
+  }
+
   const where =
     input.channel === "whatsapp"
       ? { phone: input.senderId }
@@ -168,12 +186,31 @@ export async function handleInboundMessage(input: {
       direction: "inbound",
       status: "received",
       subject: input.text.slice(0, 180),
+      externalId: input.messageId ?? null,
       sentAt: new Date(),
     },
   });
 
+  // Scoring du lead (intention, récence, source, réservations)
+  const { temperature } = await scoreLead(lead.id).catch((err) => {
+    console.error("[leads] Scoring impossible, température par défaut :", err);
+    return { score: 0, temperature: "cold" as const };
+  });
+
+  // Réponse : escalade humaine (situationnelle ou explicite), sinon réponse IA
+  let replyText: string | undefined;
+  if (needsHumanEscalation(input.text)) {
+    replyText = escalationMessage();
+  } else {
+    const { escalate, reply } = await analyzeInbound(input.text, lead.id, temperature).catch((err) => {
+      console.error("[leads] Analyse IA impossible, gabarit utilisé :", err);
+      return { escalate: false, reply: "" };
+    });
+    replyText = escalate ? escalationMessage() : reply || undefined;
+  }
+
   // Réponse automatique dans la fenêtre de 24 h
-  await sendAutoReply(lead, input.channel).catch((err) =>
+  await sendAutoReply(lead, input.channel, replyText).catch((err) =>
     console.error("[leads] Réponse automatique impossible :", err),
   );
   return lead;

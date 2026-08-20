@@ -19,7 +19,6 @@ export interface MessagingTarget {
 }
 
 const STAGE_KIND = ["welcome", "followup1", "followup2", "offer"] as const;
-const OFFER = "10% de remise";
 
 function firstName(lead: MessagingTarget): string {
   return lead.name?.trim().split(/\s+/)[0] || "cher client";
@@ -40,15 +39,16 @@ function channelConfigured(channel: Channel): boolean {
 
 function messengerText(kind: (typeof STAGE_KIND)[number], name: string): string {
   const hotel = config.hotel.name;
+  const agent = config.agent.name;
   switch (kind) {
     case "welcome":
-      return `Bonjour ${name} 👋 Merci pour votre intérêt pour ${hotel} ! ${config.hotel.tagline}. Dites-nous vos dates de séjour, nous vous répondons très vite.`;
+      return `Bonjour ${name} 👋 Je suis ${agent}, votre conseiller dédié à ${hotel} ! ${config.hotel.tagline}. Dites-moi vos dates de séjour, je vous réponds très vite.`;
     case "followup1":
-      return `Bonjour ${name} ✨ Votre escapade à ${hotel} est toujours disponible. Réservez sous 48h et profitez de ${OFFER} !`;
+      return `Bonjour ${name} ✨ Votre escapade à ${hotel} est toujours disponible. Réservez sous 48h et profitez de ${config.marketing.offer} !`;
     case "followup2":
-      return `Dernière chance ${name} 🏨 ${OFFER} chez ${hotel}, annulation flexible et petit-déjeuner inclus. Réservez maintenant !`;
+      return `Dernière chance ${name} 🏨 ${config.marketing.offer} chez ${hotel}, annulation flexible et petit-déjeuner inclus. Réservez maintenant !`;
     default:
-      return `Bonjour ${name} 🌅 Une offre rien que pour vous à ${hotel} : ${OFFER}. À très vite !`;
+      return `Bonjour ${name} 🌅 Une offre rien que pour vous à ${hotel} : ${config.marketing.offer}. À très vite !`;
   }
 }
 
@@ -97,7 +97,7 @@ async function dispatch(
   const name = firstName(lead);
 
   if (channel === "email") {
-    const tpl = emailTemplate(kind, { name, offer: OFFER });
+    const tpl = emailTemplate(kind, { name, offer: config.marketing.offer });
     const r = await sendEmail({ to: lead.email!, subject: tpl.subject, html: tpl.html });
     return { sent: r.sent, demo: r.demo };
   }
@@ -111,7 +111,7 @@ async function dispatch(
     return whatsapp.sendTemplateMessage({
       to: lead.phone!,
       template: tplName,
-      params: [name, config.hotel.name, OFFER],
+      params: [name, config.hotel.name, config.marketing.offer],
     });
   }
   return messenger.sendText({
@@ -150,23 +150,26 @@ export async function sendNurtureMessage(
   }
 }
 
-/** Réponse automatique immédiate (fenêtre 24 h) après un message entrant. */
+/** Réponse automatique immédiate (fenêtre 24 h) après un message entrant.
+ * `textOverride` : réponse IA contextuelle ; sinon gabarit de secours. */
 export async function sendAutoReply(
   lead: MessagingTarget,
   channel: "whatsapp" | "messenger",
+  textOverride?: string,
 ): Promise<{ sent: boolean; demo: boolean }> {
   const name = firstName(lead);
   const hotel = config.hotel.name;
   try {
     const text =
-      channel === "whatsapp"
-        ? `Bonjour ${name} ! Merci pour votre message ☀️ L'équipe ${hotel} vous répond très vite. En attendant, dites-nous vos dates de séjour.`
-        : `Bonjour ${name} ! Merci pour votre message ☀️ L'équipe ${hotel} vous répond très vite. Quelles dates vous intéressent ?`;
+      textOverride ||
+      (channel === "whatsapp"
+        ? `Bonjour ${name} ! Je suis ${config.agent.name}, votre conseiller à ${hotel} ☀️ Dites-moi vos dates de séjour et je m'occupe du reste.`
+        : `Bonjour ${name} ! Je suis ${config.agent.name}, votre conseiller à ${hotel} ☀️ Quelles dates vous intéressent ?`);
     const result =
       channel === "whatsapp"
         ? await whatsapp.sendTextMessage({ to: lead.phone!, text })
         : await messenger.sendText({ psid: lead.messengerPsid!, text });
-    await logMessage(lead.id, channel, "Réponse automatique", "sent", result.messageId ?? null);
+    await logMessage(lead.id, channel, textOverride ? "Réponse IA" : "Réponse automatique", "sent", result.messageId ?? null);
     return { sent: true, demo: result.demo };
   } catch (err) {
     await logMessage(lead.id, channel, "Réponse automatique", "failed", null, (err as Error).message);

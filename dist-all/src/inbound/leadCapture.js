@@ -7,6 +7,8 @@ exports.handleInboundMessage = handleInboundMessage;
 exports.handleReferral = handleReferral;
 const config_1 = require("../config");
 const db_1 = require("../db");
+const chatReply_1 = require("../content/chatReply");
+const scoring_1 = require("./scoring");
 const messaging_1 = require("./messaging");
 async function captureLead(input) {
     if (!input.email && !input.phone && !input.messengerPsid) {
@@ -84,6 +86,8 @@ async function nurtureLeads() {
     });
     let sent = 0;
     for (const lead of leads) {
+        // Scoring à jour (température hot/warm/cold)
+        await (0, scoring_1.scoreLead)(lead.id).catch((err) => console.error(`[leads] Scoring impossible pour ${lead.id} :`, err));
         const stage = lead.messages.length;
         if (stage > STAGE_MAX) {
             await db_1.prisma.lead.update({ where: { id: lead.id }, data: { status: "nurturing" } });
@@ -101,8 +105,18 @@ async function nurtureLeads() {
     return { sent };
 }
 const STAGE_MAX = 3;
-/** Message entrant WhatsApp/Messenger : crée le lead s'il n'existe pas, répond automatiquement. */
+/** Message entrant WhatsApp/Messenger : crée le lead s'il n'existe pas, répond automatiquement.
+ * `messageId` (id Meta du message) permet d'éviter les doublons lors des retries de webhook. */
 async function handleInboundMessage(input) {
+    // Déduplication : Meta peut renvoyer le même événement si la réponse tarde
+    if (input.messageId) {
+        const dup = await db_1.prisma.messageLog.findFirst({
+            where: { externalId: input.messageId, direction: "inbound" },
+            select: { id: true },
+        });
+        if (dup)
+            return null;
+    }
     const where = input.channel === "whatsapp"
         ? { phone: input.senderId }
         : { messengerPsid: input.senderId };
@@ -128,11 +142,29 @@ async function handleInboundMessage(input) {
             direction: "inbound",
             status: "received",
             subject: input.text.slice(0, 180),
+            externalId: input.messageId ?? null,
             sentAt: new Date(),
         },
     });
+    // Scoring du lead (intention, récence, source, réservations)
+    const { temperature } = await (0, scoring_1.scoreLead)(lead.id).catch((err) => {
+        console.error("[leads] Scoring impossible, température par défaut :", err);
+        return { score: 0, temperature: "cold" };
+    });
+    // Réponse : escalade humaine (situationnelle ou explicite), sinon réponse IA
+    let replyText;
+    if ((0, chatReply_1.needsHumanEscalation)(input.text)) {
+        replyText = (0, chatReply_1.escalationMessage)();
+    }
+    else {
+        const { escalate, reply } = await (0, chatReply_1.analyzeInbound)(input.text, lead.id, temperature).catch((err) => {
+            console.error("[leads] Analyse IA impossible, gabarit utilisé :", err);
+            return { escalate: false, reply: "" };
+        });
+        replyText = escalate ? (0, chatReply_1.escalationMessage)() : reply || undefined;
+    }
     // Réponse automatique dans la fenêtre de 24 h
-    await (0, messaging_1.sendAutoReply)(lead, input.channel).catch((err) => console.error("[leads] Réponse automatique impossible :", err));
+    await (0, messaging_1.sendAutoReply)(lead, input.channel, replyText).catch((err) => console.error("[leads] Réponse automatique impossible :", err));
     return lead;
 }
 /** Référencement m.me (campaign_xxx) : crée le lead Messenger rattaché à la campagne. */

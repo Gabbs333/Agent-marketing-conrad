@@ -72,6 +72,8 @@ model Lead {
   phone         String?
   messengerPsid String?
   status        String   @default("new")
+  score         Int?     // 0-100 (scoring marketing)
+  temperature   String?  // hot | warm | cold
   notes         String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
