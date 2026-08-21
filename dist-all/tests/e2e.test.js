@@ -58,6 +58,7 @@ process.env.DEMO_MODE = "true";
 process.env.ADMIN_API_KEY = "test-secret-123";
 process.env.WEBHOOK_VERIFY_TOKEN = "test-verify-token";
 process.env.NURTURE_CHANNELS = "email,whatsapp,messenger";
+process.env.NURTURE_HOURS = ""; // envois à toute heure dans les tests
 let app;
 let prisma;
 let buildApp;
@@ -211,10 +212,12 @@ async function req(method, url, body, headers = {}) {
     strict_1.default.equal(r.data, "CHALLENGE_42");
 });
 (0, node_test_1.test)("nurturing : envoi de l'étape suivante aux leads éligibles", async () => {
-    // rendre le lead éligible (créé il y a plus de 24 h)
-    await prisma.lead.update({
-        where: { id: leadId },
-        data: { createdAt: new Date(Date.now() - 48 * 3600 * 1000) },
+    // rendre le lead éligible : anciens messages sortants (intervalle mesuré
+    // sur le dernier envoi, et non sur la création du lead)
+    const old = new Date(Date.now() - 96 * 3600 * 1000);
+    await prisma.messageLog.updateMany({
+        where: { leadId, direction: "outbound" },
+        data: { sentAt: old, createdAt: old },
     });
     const r = await req("POST", "/api/leads/nurture", {}, AUTH);
     strict_1.default.equal(r.status, 200);

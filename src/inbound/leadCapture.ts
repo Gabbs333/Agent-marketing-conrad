@@ -102,32 +102,70 @@ export async function convertToBooking(leadId: string, input: BookingInput): Pro
 }
 
 /**
- * Nurturing multicanal : envoie l'étape suivante de la séquence
- * (0 accueil, 1 relance, 2 relance, 3 offre) aux leads non convertis
- * dont le dernier contact date de plus de NURTURE_INTERVAL_HOURS.
+ * Nurturing multicanal avancé : envoie l'étape suivante de la séquence
+ * (0 accueil, 1 relance, 2 relance, 3 offre) aux leads non convertis.
+ *  - cadence adaptée à la température : chaud = NURTURE_HOT_INTERVAL_HOURS
+ *    (accéléré, poussé vers l'offre), tiède = intervalle normal,
+ *    froid = intervalle doublé ;
+ *  - fenêtre horaire d'envoi (NURTURE_HOURS, ex. « 8-20 ») pour ne jamais
+ *    écrire en pleine nuit ;
+ *  - intervalle mesuré depuis le DERNIER message sortant (et non la création) ;
+ *  - canal préféré du lead (dernier canal utilisé) prioritaire.
  */
-export async function nurtureLeads(): Promise<{ sent: number }> {
-  const cutoff = new Date(Date.now() - config.nurture.intervalHours * 3600 * 1000);
+export async function nurtureLeads(): Promise<{ sent: number; skipped: number }> {
+  if (!withinBusinessHours()) {
+    console.log("[nurture] Hors fenêtre horaire autorisée, envois différés.");
+    return { sent: 0, skipped: 0 };
+  }
+
   const leads = await prisma.lead.findMany({
     where: {
       status: { in: ["new", "contacted", "replied", "nurturing"] },
-      createdAt: { lt: cutoff },
     },
-    include: { messages: { where: { direction: "outbound", status: "sent" } } },
+    include: {
+      messages: {
+        where: { direction: "outbound", status: "sent" },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+      },
+    },
   });
 
   let sent = 0;
+  let skipped = 0;
   for (const lead of leads) {
-    // Scoring à jour (température hot/warm/cold)
-    await scoreLead(lead.id).catch((err) =>
-      console.error(`[leads] Scoring impossible pour ${lead.id} :`, err),
-    );
+    const { temperature } = await scoreLead(lead.id).catch((err) => {
+      console.error(`[leads] Scoring impossible pour ${lead.id} :`, err);
+      return { score: 0, temperature: "cold" as const };
+    });
 
-    const stage = lead.messages.length;
-    if (stage > STAGE_MAX) {
-      await prisma.lead.update({ where: { id: lead.id }, data: { status: "nurturing" } });
+    // Cadence selon la température
+    const interval =
+      temperature === "hot"
+        ? config.nurture.hotIntervalHours
+        : temperature === "cold"
+          ? config.nurture.intervalHours * 2
+          : config.nurture.intervalHours;
+
+    const lastOutbound = lead.messages[0];
+    if (
+      lastOutbound &&
+      Date.now() - lastOutbound.createdAt.getTime() < interval * 3600 * 1000
+    ) {
+      skipped++;
       continue;
     }
+
+    let stage = lead.messages.length;
+    if (stage > STAGE_MAX) {
+      await prisma.lead.update({ where: { id: lead.id }, data: { status: "nurturing" } });
+      skipped++;
+      continue;
+    }
+
+    // Lead chaud : accélérer directement vers la relance forte (offre incluse)
+    if (temperature === "hot") stage = Math.max(stage, 2);
+
     const result = await sendNurtureMessage(lead, stage);
     if (result.sent) {
       await prisma.lead.update({
@@ -135,12 +173,62 @@ export async function nurtureLeads(): Promise<{ sent: number }> {
         data: { status: stage === 0 ? "contacted" : "nurturing" },
       });
       sent++;
+    } else {
+      skipped++;
     }
   }
-  return { sent };
+  return { sent, skipped };
+}
+
+/** Fenêtre horaire d'envoi autorisée dans le fuseau de l'hôtel. */
+export function withinBusinessHours(): boolean {
+  const range = config.nurture.hours;
+  if (!range || !range.includes("-")) return true;
+  const [start, end] = range.split("-").map((n) => Number(n.trim()));
+  if (Number.isNaN(start) || Number.isNaN(end)) return true;
+  try {
+    const hour =
+      Number(
+        new Intl.DateTimeFormat("fr-FR", {
+          hour: "numeric",
+          hour12: false,
+          timeZone: config.nurture.timezone,
+        })
+          .format(new Date())
+          .replace(/\D/g, ""),
+      ) % 24;
+    return start <= end ? hour >= start && hour < end : hour >= start || hour < end;
+  } catch {
+    return true; // fuseau invalide → ne bloque pas le nurturing
+  }
 }
 
 const STAGE_MAX = 3;
+
+/** Mots-clés d'opt-out (conformité) : le lead demande à ne plus être contacté. */
+const OPT_OUT_KEYWORDS = [
+  "stop",
+  "arretez",
+  "arrêtez",
+  "ne m'ecrivez plus",
+  "ne m'écrivez plus",
+  "ne me contactez plus",
+  "desabonnez",
+  "désabonnez",
+  "unsubscribe",
+];
+
+const norm = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+/** Vrai si le message est une demande d'arrêt des envois. */
+export function isOptOut(text: string): boolean {
+  const t = norm(text);
+  return OPT_OUT_KEYWORDS.some((k) => t.includes(norm(k)));
+}
 
 /** Message entrant WhatsApp/Messenger : crée le lead s'il n'existe pas, répond automatiquement.
  * `messageId` (id Meta du message) permet d'éviter les doublons lors des retries de webhook. */
@@ -170,13 +258,42 @@ export async function handleInboundMessage(input: {
       data: {
         phone: input.channel === "whatsapp" ? input.senderId : null,
         messengerPsid: input.channel === "messenger" ? input.senderId : null,
+        preferredChannel: input.channel,
         source: input.channel,
         status: "replied",
         notes: `Message entrant : ${input.text.slice(0, 200)}`,
       },
     });
   } else {
-    await prisma.lead.update({ where: { id: lead.id }, data: { status: "replied" } });
+    await prisma.lead.update({
+      where: { id: lead.id },
+      data: { status: "replied", preferredChannel: input.channel },
+    });
+  }
+
+  // Opt-out (conformité) : le lead demande l'arrêt des envois
+  if (isOptOut(input.text)) {
+    await prisma.messageLog.create({
+      data: {
+        leadId: lead.id,
+        channel: input.channel,
+        direction: "inbound",
+        status: "received",
+        subject: input.text.slice(0, 180),
+        externalId: input.messageId ?? null,
+        sentAt: new Date(),
+      },
+    });
+    await prisma.lead.update({
+      where: { id: lead.id },
+      data: { status: "unsubscribed" },
+    });
+    await sendAutoReply(
+      lead,
+      input.channel,
+      "C'est noté 🙏 Nous ne vous recontacterons plus. Bonne continuation et à bientôt au Conrad Grand Luxury Hotel.",
+    ).catch((err) => console.error("[leads] Confirmation d'opt-out impossible :", err));
+    return lead;
   }
 
   await prisma.messageLog.create({

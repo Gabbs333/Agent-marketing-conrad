@@ -46,6 +46,7 @@ const pipeline_1 = require("../pipeline");
 const leadCapture_1 = require("../inbound/leadCapture");
 const messaging_1 = require("../inbound/messaging");
 const webhooks_1 = require("../messaging/webhooks");
+const tiktokWebhooks_1 = require("../messaging/tiktokWebhooks");
 const messenger_1 = require("../messaging/messenger");
 const tiktok_1 = require("../social/tiktok");
 const facebook_1 = require("../social/facebook");
@@ -342,14 +343,29 @@ async function adminRoutes(app) {
             return reply.code(500).send({ error: err.message });
         }
     });
-    app.get("/webhooks/tiktok", async (_req, reply) => {
-        // TikTok valide l'endpoint via un challenge signé (HMAC) — implémenté lors
-        // de la connexion réelle de TikTok Business.
+    app.get("/webhooks/tiktok", async (req, reply) => {
+        // TikTok peut valider l'endpoint en renvoyant un challenge en clair
+        const q = req.query;
+        if (q.challenge)
+            return reply.type("text/plain").send(q.challenge);
         return reply.code(200).send("OK");
     });
     app.post("/webhooks/tiktok", async (req, reply) => {
-        console.log("[webhook] Événement TikTok reçu :", JSON.stringify(req.body).slice(0, 500));
-        return reply.code(200).send("EVENT_RECEIVED");
+        // Corps brut nécessaire pour vérifier la signature HMAC
+        const rawReq = req;
+        const raw = rawReq.rawBody ? String(rawReq.rawBody) : JSON.stringify(req.body);
+        if (!(0, tiktokWebhooks_1.verifyTiktokSignature)(raw, req.headers["x-tiktok-signature"])) {
+            return reply.code(401).send({ error: "Signature invalide" });
+        }
+        try {
+            const result = await (0, tiktokWebhooks_1.handleTiktokEvent)(req.body);
+            // Réponse au ping : TikTok attend le même corps en retour
+            return result.ping ? req.body : { received: true, ...result };
+        }
+        catch (err) {
+            console.error("[tiktok] Erreur de traitement :", err);
+            return reply.code(500).send({ error: err.message });
+        }
     });
     // ─── Génération de contenu ──────────────────────────────────
     // Tons éditoriaux disponibles
@@ -784,7 +800,8 @@ async function adminRoutes(app) {
         const result = await (0, messaging_1.sendNurtureMessage)(lead, p.data.stage, p.data.channel);
         if (!result.sent) {
             return reply.code(400).send({
-                error: "Aucun canal disponible pour ce lead. Vérifiez email/phone/PSID et la configuration.",
+                error: result.error ||
+                    "Aucun canal disponible pour ce lead. Vérifiez email/phone/PSID et la configuration.",
             });
         }
         return result;

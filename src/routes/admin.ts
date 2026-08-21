@@ -24,6 +24,7 @@ import {
 } from "../inbound/leadCapture";
 import { sendNurtureMessage } from "../inbound/messaging";
 import { handleWebhookEvent } from "../messaging/webhooks";
+import { handleTiktokEvent, verifyTiktokSignature } from "../messaging/tiktokWebhooks";
 import { buildRefUrl, requestOneTimeNotification } from "../messaging/messenger";
 import {
   buildAuthUrl as buildTiktokAuthUrl,
@@ -368,15 +369,28 @@ export async function adminRoutes(app: FastifyInstance) {
     }
   });
 
-  app.get("/webhooks/tiktok", async (_req, reply) => {
-    // TikTok valide l'endpoint via un challenge signé (HMAC) — implémenté lors
-    // de la connexion réelle de TikTok Business.
+  app.get("/webhooks/tiktok", async (req, reply) => {
+    // TikTok peut valider l'endpoint en renvoyant un challenge en clair
+    const q = req.query as { challenge?: string };
+    if (q.challenge) return reply.type("text/plain").send(q.challenge);
     return reply.code(200).send("OK");
   });
 
   app.post("/webhooks/tiktok", async (req, reply) => {
-    console.log("[webhook] Événement TikTok reçu :", JSON.stringify(req.body).slice(0, 500));
-    return reply.code(200).send("EVENT_RECEIVED");
+    // Corps brut nécessaire pour vérifier la signature HMAC
+    const rawReq = req as unknown as { rawBody?: Buffer | string };
+    const raw = rawReq.rawBody ? String(rawReq.rawBody) : JSON.stringify(req.body);
+    if (!verifyTiktokSignature(raw, req.headers["x-tiktok-signature"] as string | undefined)) {
+      return reply.code(401).send({ error: "Signature invalide" });
+    }
+    try {
+      const result = await handleTiktokEvent(req.body);
+      // Réponse au ping : TikTok attend le même corps en retour
+      return result.ping ? req.body : { received: true, ...result };
+    } catch (err) {
+      console.error("[tiktok] Erreur de traitement :", err);
+      return reply.code(500).send({ error: (err as Error).message });
+    }
   });
 
   // ─── Génération de contenu ──────────────────────────────────
@@ -808,7 +822,9 @@ export async function adminRoutes(app: FastifyInstance) {
     const result = await sendNurtureMessage(lead, p.data.stage, p.data.channel);
     if (!result.sent) {
       return reply.code(400).send({
-        error: "Aucun canal disponible pour ce lead. Vérifiez email/phone/PSID et la configuration.",
+        error:
+          result.error ||
+          "Aucun canal disponible pour ce lead. Vérifiez email/phone/PSID et la configuration.",
       });
     }
     return result;

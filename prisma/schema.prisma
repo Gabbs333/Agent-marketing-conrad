@@ -64,19 +64,20 @@ model Ad {
 }
 
 model Lead {
-  id            String   @id @default(cuid())
-  campaignId    String?
-  source        String
-  name          String?
-  email         String?
-  phone         String?
-  messengerPsid String?
-  status        String   @default("new")
-  score         Int?     // 0-100 (scoring marketing)
-  temperature   String?  // hot | warm | cold
-  notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id               String   @id @default(cuid())
+  campaignId       String?
+  source           String
+  name             String?
+  email            String?
+  phone            String?
+  messengerPsid    String?
+  preferredChannel String?  // dernier canal utilisé par le lead (email|whatsapp|messenger)
+  status           String   @default("new")
+  score            Int?     // 0-100 (scoring marketing)
+  temperature      String?  // hot | warm | cold
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   campaign Campaign?    @relation(fields: [campaignId], references: [id])
   messages MessageLog[]

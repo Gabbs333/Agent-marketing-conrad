@@ -129,6 +129,11 @@ exports.config = {
             .map((s) => s.trim().toLowerCase())
             .filter(Boolean),
         intervalHours: Number(get("NURTURE_INTERVAL_HOURS", "24")),
+        /** Leads chauds : relance plus rapide (heures). */
+        hotIntervalHours: Number(get("NURTURE_HOT_INTERVAL_HOURS", "6")),
+        /** Fenêtre d'envoi autorisée « 8-20 » (vide = à toute heure). */
+        hours: get("NURTURE_HOURS", "8-20"),
+        timezone: get("NURTURE_TIMEZONE", "Africa/Douala"),
     },
     /** Relecture IA des brouillons avant publication. */
     review: {

@@ -132,11 +132,18 @@ async function dispatch(channel, stage, lead) {
  * (ordre défini par NURTURE_CHANNELS), ou le canal forcé si précisé.
  */
 async function sendNurtureMessage(lead, stage, forcedChannel) {
-    const channels = forcedChannel ? [forcedChannel] : config_1.config.nurture.channels;
+    // Canal forcé > canal préféré du lead > ordre configuré
+    const base = config_1.config.nurture.channels;
+    const channels = forcedChannel
+        ? [forcedChannel]
+        : lead.preferredChannel && base.includes(lead.preferredChannel)
+            ? [lead.preferredChannel, ...base.filter((c) => c !== lead.preferredChannel)]
+            : base;
     const channel = channels.find((c) => channelAvailable(c, lead) && channelConfigured(c));
     if (!channel) {
-        await logMessage(lead.id, "email", "Nurture", "failed", null, "Aucun canal disponible/configuré pour ce lead");
-        return { channel: null, sent: false, demo: config_1.config.demoMode };
+        const err = "Aucun canal disponible/configuré pour ce lead";
+        await logMessage(lead.id, "email", "Nurture", "failed", null, err);
+        return { channel: null, sent: false, demo: config_1.config.demoMode, error: err };
     }
     const subject = subjectFor(channel, stage, lead);
     try {
@@ -145,8 +152,9 @@ async function sendNurtureMessage(lead, stage, forcedChannel) {
         return { channel, sent: true, demo: result.demo };
     }
     catch (err) {
-        await logMessage(lead.id, channel, subject, "failed", null, err.message);
-        return { channel, sent: false, demo: false };
+        const msg = err.message;
+        await logMessage(lead.id, channel, subject, "failed", null, msg);
+        return { channel, sent: false, demo: false, error: msg };
     }
 }
 /** Réponse automatique immédiate (fenêtre 24 h) après un message entrant.

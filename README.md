@@ -178,7 +178,7 @@ Meta n'autorise qu'**UN seul webhook par numéro WhatsApp**. Si un autre agent (
 
 Sans `RECEPTIONIST_WEBHOOK_URL`, tout est traité par l'agent marketing (comportement par défaut).
 
-### Séquence de nurturing
+### Séquence de nurturing (avancé)
 
 | Étape | Email | WhatsApp | Messenger |
 |---|---|---|---|
@@ -188,6 +188,18 @@ Sans `RECEPTIONIST_WEBHOOK_URL`, tout est traité par l'agent marketing (comport
 | 3 — Offre | `offer` | `hotel_offer` | Texte |
 
 L'ordre des canaux est piloté par `NURTURE_CHANNELS` (défaut `email,whatsapp,messenger`) et l'intervalle par `NURTURE_INTERVAL_HOURS` (défaut `24`). Chaque envoi (et réception) est journalisé dans la table `MessageLog` (canal, direction, statut).
+
+**Nurturing intelligent** (déjà actif) :
+- **Température du lead** : chaud → relance accélérée (`NURTURE_HOT_INTERVAL_HOURS`, défaut `6`) et passage direct à l'offre ; froid → intervalle doublé.
+- **Canal préféré** : le dernier canal utilisé par le lead (WhatsApp/Messenger/email) est prioritaire.
+- **Fenêtre horaire** : envois uniquement entre `NURTURE_HOURS` (défaut `8-20`) dans le fuseau `NURTURE_TIMEZONE` (défaut `Africa/Douala`).
+- **Opt-out (conformité)** : les mots-clés « stop », « arrêtez », « désabonnez »… passent le lead en statut `unsubscribed` et stoppent définitivement les envois.
+- **Intervalle mesuré** sur le dernier message envoyé (et non la création du lead).
+
+### Webhooks TikTok (Marketing API)
+
+- `GET /api/webhooks/tiktok` : renvoie le `challenge` de validation ;
+- `POST /api/webhooks/tiktok` : vérifie la signature `X-TikTok-Signature` (HMAC-SHA256 avec `TIKTOK_CLIENT_SECRET`), répond au `ping` de validation et **capture les leads TikTok Ads** (Lead Generation) dans le CRM (source `tiktok_ads`).
 
 ## IA : LLM, images et vidéos (open source dernière génération)
 

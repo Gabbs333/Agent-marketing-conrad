@@ -16,6 +16,7 @@ export interface MessagingTarget {
   email: string | null;
   phone: string | null;
   messengerPsid: string | null;
+  preferredChannel?: string | null;
 }
 
 const STAGE_KIND = ["welcome", "followup1", "followup2", "offer"] as const;
@@ -128,15 +129,22 @@ export async function sendNurtureMessage(
   lead: MessagingTarget,
   stage: number,
   forcedChannel?: Channel,
-): Promise<{ channel: Channel | null; sent: boolean; demo: boolean }> {
-  const channels = forcedChannel ? [forcedChannel] : config.nurture.channels;
+): Promise<{ channel: Channel | null; sent: boolean; demo: boolean; error?: string }> {
+  // Canal forcé > canal préféré du lead > ordre configuré
+  const base = config.nurture.channels;
+  const channels = forcedChannel
+    ? [forcedChannel]
+    : lead.preferredChannel && (base as string[]).includes(lead.preferredChannel)
+      ? [lead.preferredChannel as Channel, ...base.filter((c) => c !== lead.preferredChannel)]
+      : base;
   const channel = channels.find(
     (c) => channelAvailable(c, lead) && channelConfigured(c),
   );
 
   if (!channel) {
-    await logMessage(lead.id, "email", "Nurture", "failed", null, "Aucun canal disponible/configuré pour ce lead");
-    return { channel: null, sent: false, demo: config.demoMode };
+    const err = "Aucun canal disponible/configuré pour ce lead";
+    await logMessage(lead.id, "email", "Nurture", "failed", null, err);
+    return { channel: null, sent: false, demo: config.demoMode, error: err };
   }
 
   const subject = subjectFor(channel, stage, lead);
@@ -145,8 +153,9 @@ export async function sendNurtureMessage(
     await logMessage(lead.id, channel, subject, "sent", result.messageId ?? null);
     return { channel, sent: true, demo: result.demo };
   } catch (err) {
-    await logMessage(lead.id, channel, subject, "failed", null, (err as Error).message);
-    return { channel, sent: false, demo: false };
+    const msg = (err as Error).message;
+    await logMessage(lead.id, channel, subject, "failed", null, msg);
+    return { channel, sent: false, demo: false, error: msg };
   }
 }
 
