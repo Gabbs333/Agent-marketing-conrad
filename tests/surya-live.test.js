@@ -40,13 +40,30 @@ const {
   const { score, temperature } = await scoreLead(lead.id);
   console.log(`Scoring : ${score}/100 → ${temperature}`);
 
-  // 3. Réponse IA (Surya) pour un lead chaud
-  const a1 = await analyzeInbound(
-    "Pouvez-vous me confirmer vos disponibilités pour le week-end prochain ?",
+  // 3. Conversation en 2 temps : premier contact (présentation) puis suite (continuité)
+  const first = await analyzeInbound("Bonjour", lead.id, "cold");
+  console.log("\n── MESSAGE 1 (premier contact) ──\n" + first.reply);
+
+  // Simuler l'envoi de la réponse (journal outbound, comme sendAutoReply)
+  await prisma.messageLog.create({
+    data: {
+      leadId: lead.id,
+      channel: "whatsapp",
+      direction: "outbound",
+      status: "sent",
+      subject: first.reply.slice(0, 180),
+      sentAt: new Date(),
+    },
+  });
+
+  const second = await analyzeInbound(
+    "Et pour une suite avec vue, ce serait combien ?",
     lead.id,
     temperature,
   );
-  console.log("\n── RÉPONSE DE SURYA (lead tiède) ──\n[escalate:", a1.escalate + "]", a1.reply);
+  console.log("\n── MESSAGE 2 (conversation déjà engagée) ──\n" + second.reply);
+  const robotic = /^(bonjour|salut)|je suis surya|ravi de vous|enchanté/i.test(second.reply);
+  console.log("\nRéponse 2 avec salutation/auto-présentation :", robotic ? "OUI ❌ (robotique)" : "NON ✔ (naturel)");
 
   // 4. Escalade situationnelle : frustration, sans demande explicite d'humain
   const a2 = await analyzeInbound(

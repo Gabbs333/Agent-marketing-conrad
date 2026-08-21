@@ -79,7 +79,10 @@ function offerInstruction(temperature) {
     }
     return "Le lead est FROID. Qualifie d'abord son besoin (dates, budget, composition du séjour) avant d'évoquer une offre.";
 }
-function systemPrompt(temperature) {
+function systemPrompt(temperature, firstContact) {
+    const greeting = firstContact
+        ? "PREMIER CONTACT : présente-toi en UNE phrase sobre (« Bonjour, je suis ${config.agent.name}, conseiller à ${config.hotel.name} »), puis réponds."
+        : "CONVERSATION DÉJÀ ENGAGÉE : ne salue PAS, ne te re-présente PAS, ne répète pas le nom de l'hôtel inutilement. Réponds directement, dans la continuité naturelle de l'historique, comme un humain qui suit le fil de la conversation.";
     return `Tu es ${config_1.config.agent.name}, conseiller marketing de l'hôtel « ${config_1.config.hotel.name} ». ${config_1.config.hotel.tagline}.
 Ton rôle est STRICTEMENT marketing : acquisition de clients, offres, réservations, fidélisation, relances.
 Tu ne gères PAS la conciergerie ni le service en chambre : oriente poliment le client vers l'équipe de la réception.
@@ -94,9 +97,11 @@ Ne partage alors pas les numéros toi-même : le système s'en charge.
 
 RÈGLES DE RÉDACTION (reply) :
 - Réponds en français, ton chaleureux et professionnel ;
-- Présente-toi comme ${config_1.config.agent.name} au premier contact ; ne révèle JAMAIS que tu es une IA ou un robot ;
+- ${greeting}
+- ne révèle JAMAIS que tu es une IA ou un robot ;
 - 3 phrases maximum, 80 mots maximum, adapté à WhatsApp (pas de markdown, pas d'astérisques, pas de listes) ;
 - 2 émojis maximum ;
+- varie tes formulations : ne commence jamais deux réponses par la même formule ;
 - Ne jamais inventer de prix, de disponibilités ou d'offres qui ne figurent pas dans l'historique ;
 - Termine souvent par une question pour faire avancer la conversation.
 ${offerInstruction(temperature)}
@@ -112,15 +117,17 @@ async function analyzeInbound(userText, leadId, temperature = "cold") {
         orderBy: { createdAt: "desc" },
         take: CONTEXT_MESSAGES,
     });
-    const lines = history
-        .reverse()
+    const ordered = history.reverse();
+    const lines = ordered
         .filter((m) => m.subject)
         .map((m) => `${m.direction === "inbound" ? "Client" : "Agent"} : ${m.subject}`)
         .join("\n");
+    // Premier contact = l'agent n'a encore jamais écrit dans cette conversation
+    const firstContact = !history.some((m) => m.direction === "outbound");
     const prompt = lines
         ? `Historique de la conversation :\n${lines}\n\nDernier message du client : ${userText}`
         : `Dernier message du client : ${userText}`;
-    const raw = await (0, llm_1.completeText)(prompt, systemPrompt(temperature));
+    const raw = await (0, llm_1.completeText)(prompt, systemPrompt(temperature, firstContact));
     const parsed = parseJson(raw);
     if (parsed && typeof parsed.reply === "string") {
         return { escalate: parsed.escalate === true, reply: parsed.reply };
