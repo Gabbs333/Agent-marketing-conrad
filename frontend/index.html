@@ -456,6 +456,12 @@ const fmtDay = (d) => d ? new Date(d).toLocaleDateString("fr-FR") : "—";
 let apiKey = localStorage.getItem("hotel_api_key") || "";
 let apiBase = localStorage.getItem("hotel_api_base") || window.API_BASE || "";
 const apiUrl = (path) => apiBase.replace(/\/+$/, "") + "/api" + path;
+// URLs de médias : relatives au backend (ex. /assets/images/x.jpg)
+const assetUrl = (u) => {
+  if (!u) return "";
+  if (/^https?:\/\//.test(u) || u.startsWith("data:")) return u;
+  return apiBase.replace(/\/+$/, "") + (u.startsWith("/") ? u : "/" + u);
+};
 
 async function api(method, path, body, retried) {
   const headers = {};
@@ -807,14 +813,14 @@ window.previewPost = (i) => {
   if (!p) return;
   if (p.platform === "tiktok") {
     $("#previewBox").innerHTML = `<div class="preview-wrap"><div class="phone">
-      <div class="stage">${p.mediaType === "video" && p.mediaUrl ? `<video src="${esc(p.mediaUrl)}" autoplay loop controls playsinline></video>` : p.mediaUrl ? `<img src="${esc(p.mediaUrl)}"/>` : '<div style="color:#fff">Sans média</div>'}</div>
+      <div class="stage">${p.mediaType === "video" && p.mediaUrl ? `<video src="${esc(assetUrl(p.mediaUrl))}" autoplay loop controls playsinline></video>` : p.mediaUrl ? `<img src="${esc(assetUrl(p.mediaUrl))}"/>` : '<div style="color:#fff">Sans média</div>'}</div>
       ${p.text ? `<div class="caption">${esc(p.text)}</div>` : ""}
     </div></div>`;
   } else {
     $("#previewBox").innerHTML = `<div class="preview-wrap"><div class="fb-card">
       <div class="head"><div class="avatar">C</div><div><div>Conrad Grand Luxury Hotel</div><div class="muted">Statut : ${esc(p.status)}</div></div></div>
       <div class="text">${esc(p.text)}</div>
-      ${p.mediaUrl ? `<img src="${esc(p.mediaUrl)}"/>` : ""}
+      ${p.mediaUrl ? `<img src="${esc(assetUrl(p.mediaUrl))}"/>` : ""}
       <div class="actions"><span>👍 J'aime</span><span>💬 Commenter</span><span>↗ Partager</span></div>
     </div></div>`;
   }
@@ -854,8 +860,8 @@ function renderMedia() {
   $("#mediaCount").textContent = `${list.length} média(s)`;
   $("#mediaGrid").innerHTML = list.map((m) => `
     <div class="media-item">
-      <div style="position:relative" onclick="openMedia('${esc(m.url)}','${m.type}')">
-        ${m.type === "video" ? `<video class="thumb" src="${esc(m.url)}" muted></video>` : `<img class="thumb" src="${esc(m.url)}" loading="lazy"/>`}
+      <div style="position:relative" onclick="openMedia('${esc(assetUrl(m.url))}','${m.type}')">
+        ${m.type === "video" ? `<video class="thumb" src="${esc(assetUrl(m.url))}" muted></video>` : `<img class="thumb" src="${esc(assetUrl(m.url))}" loading="lazy"/>`}
         <button class="btn ghost small" style="position:absolute;top:8px;right:8px;background:#FFFFFFF0" onclick="event.stopPropagation();editMedia('${m.id}')">✎</button>
       </div>
       <div class="meta">${m.category ? `<span class="badge gold">${esc(m.category)}</span>` : '<span class="badge">non catégorisé</span>'}<span>${fmtDay(m.createdAt)}</span></div>
@@ -915,8 +921,8 @@ $("#uploadBtn").addEventListener("click", () => { if (fileInput.files.length) do
 
 window.openMedia = (url, type) => {
   $("#previewBox").innerHTML = type === "video"
-    ? `<video src="${esc(url)}" controls autoplay style="max-width:92vw;max-height:82vh;border-radius:12px"></video>`
-    : `<img src="${esc(url)}" style="max-width:92vw;max-height:82vh;border-radius:12px"/>`;
+    ? `<video src="${esc(assetUrl(url))}" controls autoplay style="max-width:92vw;max-height:82vh;border-radius:12px"></video>`
+    : `<img src="${esc(assetUrl(url))}" style="max-width:92vw;max-height:82vh;border-radius:12px"/>`;
   $("#previewModal").classList.add("open");
 };
 $("#collectBtn").addEventListener("click", async () => {
