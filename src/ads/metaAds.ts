@@ -105,6 +105,8 @@ export async function createAdSet(input: MetaAdSetInput): Promise<{ id: string }
     // Règlement DSA (UE) : l'annonceur promeut sa propre entité.
     dsa_beneficiary: "self",
     dsa_payor: "self",
+    // Audience Advantage+ : désactivée pour conserver le ciblage manuel/IA.
+    targeting_automation: JSON.stringify({ advantage_audience: 0 }),
     targeting: JSON.stringify(targeting),
     status: "PAUSED",
   };
