@@ -4,6 +4,7 @@ exports.createCampaign = createCampaign;
 exports.createAdGroup = createAdGroup;
 exports.uploadVideoCreative = uploadVideoCreative;
 exports.createAd = createAd;
+exports.updateCampaignStatus = updateCampaignStatus;
 const node_path_1 = require("node:path");
 const config_1 = require("../config");
 const files_1 = require("../lib/files");
@@ -96,5 +97,17 @@ async function createAd(input) {
         ],
     });
     return { id: String(data.data?.ad_id ?? data.data?.id ?? "") };
+}
+/** Active (ENABLE) ou désactive (DISABLE) une campagne TikTok Ads. */
+async function updateCampaignStatus(campaignId, status) {
+    if (!ready()) {
+        console.log(`[tiktokAds][demo] Campagne ${campaignId} → ${status}`);
+        return;
+    }
+    await call("/campaign/status/update/", {
+        advertiser_id: config_1.config.tiktokAds.advertiserId,
+        campaign_ids: [campaignId],
+        operation_status: status,
+    });
 }
 //# sourceMappingURL=tiktokAds.js.map

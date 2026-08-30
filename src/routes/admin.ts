@@ -61,6 +61,32 @@ function parse<T>(schema: z.ZodType<T, z.ZodTypeDef, any>, body: unknown) {
   return { ok: true as const, data: r.data };
 }
 
+/**
+ * Applique un statut cible (paused | active | stopped) sur la plateforme
+ * publicitaire externe, puis renvoie le message d'erreur éventuel.
+ * Meta : paused/active/stopped → PAUSED / ACTIVE / PAUSED.
+ * TikTok Ads : active → ENABLE, sinon DISABLE.
+ */
+async function setAdExternalStatus(
+  platform: string,
+  externalId: string,
+  status: "paused" | "active" | "stopped",
+): Promise<string | null> {
+  if (config.demoMode) return null;
+  try {
+    if (platform === "meta") {
+      await metaAds.updateCampaignStatus(externalId, status === "active" ? "ACTIVE" : "PAUSED");
+    } else if (platform === "tiktok") {
+      await tiktokAds.updateCampaignStatus(externalId, status === "active" ? "ENABLE" : "DISABLE");
+    }
+    return null;
+  } catch (err) {
+    const msg = (err as Error).message;
+    console.error(`[ads] Statut ${status} impossible sur ${platform} (${externalId}) :`, msg);
+    return msg;
+  }
+}
+
 // ─── Schémas ──────────────────────────────────────────────────
 
 const campaignSchema = z.object({
@@ -776,12 +802,31 @@ export async function adminRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string } }>("/ads/:id/pause", async (req, reply) => {
     const ad = await prisma.ad.findUnique({ where: { id: req.params.id } });
     if (!ad) return reply.code(404).send({ error: "Annonce introuvable" });
-    if (ad.platform === "meta" && ad.externalId && !config.demoMode) {
-      await metaAds.updateCampaignStatus(ad.externalId, "PAUSED").catch((err) =>
-        console.error("[ads] Pause Meta impossible :", err),
-      );
+    if (!config.demoMode && ad.externalId) {
+      const errs = await setAdExternalStatus(ad.platform, ad.externalId, "paused");
+      if (errs) return reply.code(500).send({ error: errs });
     }
     return prisma.ad.update({ where: { id: ad.id }, data: { status: "paused" } });
+  });
+
+  app.post<{ Params: { id: string } }>("/ads/:id/resume", async (req, reply) => {
+    const ad = await prisma.ad.findUnique({ where: { id: req.params.id } });
+    if (!ad) return reply.code(404).send({ error: "Annonce introuvable" });
+    if (!config.demoMode && ad.externalId) {
+      const errs = await setAdExternalStatus(ad.platform, ad.externalId, "active");
+      if (errs) return reply.code(500).send({ error: errs });
+    }
+    return prisma.ad.update({ where: { id: ad.id }, data: { status: "active" } });
+  });
+
+  app.post<{ Params: { id: string } }>("/ads/:id/stop", async (req, reply) => {
+    const ad = await prisma.ad.findUnique({ where: { id: req.params.id } });
+    if (!ad) return reply.code(404).send({ error: "Annonce introuvable" });
+    if (!config.demoMode && ad.externalId) {
+      const errs = await setAdExternalStatus(ad.platform, ad.externalId, "stopped");
+      if (errs) return reply.code(500).send({ error: errs });
+    }
+    return prisma.ad.update({ where: { id: ad.id }, data: { status: "stopped" } });
   });
 
   // ─── Leads (capture publique) ───────────────────────────────

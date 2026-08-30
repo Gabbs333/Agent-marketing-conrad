@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getIntegrationStatus = getIntegrationStatus;
+const metaAds_1 = require("../ads/metaAds");
 const config_1 = require("../config");
 const http_1 = require("../lib/http");
 const facebook_1 = require("../social/facebook");
@@ -71,7 +72,8 @@ async function getIntegrationStatus() {
         let detail = notConfigured;
         if (configured && !demo) {
             const r = await safe(async () => {
-                const data = await (0, http_1.httpJson)(`${GRAPH_URL}/act_${config_1.config.metaAds.adAccountId}?fields=name`, { headers: { Authorization: `Bearer ${config_1.config.metaAds.accessToken}` } });
+                const actId = (0, metaAds_1.formatAdAccountId)(config_1.config.metaAds.adAccountId);
+                const data = await (0, http_1.httpJson)(`${GRAPH_URL}/${actId}?fields=name`, { headers: { Authorization: `Bearer ${config_1.config.metaAds.accessToken}` } });
                 return String(data.name ?? "compte publicitaire");
             });
             if (r.ok) {

@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.formatAdAccountId = formatAdAccountId;
 exports.createCampaign = createCampaign;
 exports.createAdSet = createAdSet;
 exports.uploadAdImage = uploadAdImage;
@@ -18,13 +19,17 @@ const http_1 = require("../lib/http");
  *  - ciblage, budgets et statuts.
  */
 const GRAPH_URL = "https://graph.facebook.com/v20.0";
+function formatAdAccountId(id) {
+    const clean = id.trim().replace(/^act_/i, "");
+    return `act_${clean}`;
+}
 function requireAccount() {
     if (config_1.config.demoMode || !config_1.config.metaAds.accessToken) {
         throw new Error("META_ACCESS_TOKEN manquant (ou DEMO_MODE=true sans API réelle)");
     }
     if (!config_1.config.metaAds.adAccountId)
         throw new Error("META_AD_ACCOUNT_ID manquant");
-    return { token: config_1.config.metaAds.accessToken, account: config_1.config.metaAds.adAccountId };
+    return { token: config_1.config.metaAds.accessToken, account: formatAdAccountId(config_1.config.metaAds.adAccountId) };
 }
 async function createCampaign(input) {
     if (config_1.config.demoMode || !config_1.config.metaAds.accessToken) {
@@ -45,7 +50,7 @@ async function createCampaign(input) {
         body.stop_time = input.endDate.toISOString();
     const params = new URLSearchParams(body);
     params.append("special_ad_categories", "[]");
-    const data = await (0, http_1.httpJson)(`${GRAPH_URL}/act_${account}/campaigns`, {
+    const data = await (0, http_1.httpJson)(`${GRAPH_URL}/${account}/campaigns`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: params,
@@ -68,7 +73,7 @@ async function createAdSet(input) {
     };
     if (input.dailyBudget)
         body.daily_budget = String(input.dailyBudget);
-    const data = await (0, http_1.httpJson)(`${GRAPH_URL}/act_${account}/adsets`, {
+    const data = await (0, http_1.httpJson)(`${GRAPH_URL}/${account}/adsets`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: new URLSearchParams(body),
@@ -83,7 +88,7 @@ async function uploadAdImage(filePath) {
     const path = (0, files_1.resolveMediaPath)(filePath);
     const form = new FormData();
     form.append("filename", await (0, files_1.fileBlob)(path), (0, node_path_1.basename)(path));
-    const data = await (0, http_1.httpJson)(`${GRAPH_URL}/act_${account}/adimages`, {
+    const data = await (0, http_1.httpJson)(`${GRAPH_URL}/${account}/adimages`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: form,
@@ -122,7 +127,7 @@ async function createAdCreative(input) {
         name: input.name,
         object_story_spec: JSON.stringify({ page_id: pageId, link_data: linkData }),
     });
-    const data = await (0, http_1.httpJson)(`${GRAPH_URL}/act_${account}/adcreatives`, {
+    const data = await (0, http_1.httpJson)(`${GRAPH_URL}/${account}/adcreatives`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body,
@@ -140,7 +145,7 @@ async function createAd(input) {
         status: "PAUSED",
         creative: JSON.stringify({ creative_id: input.creativeId }),
     });
-    const data = await (0, http_1.httpJson)(`${GRAPH_URL}/act_${account}/ads`, {
+    const data = await (0, http_1.httpJson)(`${GRAPH_URL}/${account}/ads`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body,
@@ -163,7 +168,7 @@ async function listCampaigns() {
     if (config_1.config.demoMode || !config_1.config.metaAds.accessToken)
         return [];
     const { token, account } = requireAccount();
-    const data = await (0, http_1.httpJson)(`${GRAPH_URL}/act_${account}/campaigns?fields=id,name,status,objective,daily_budget`, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await (0, http_1.httpJson)(`${GRAPH_URL}/${account}/campaigns?fields=id,name,status,objective,daily_budget`, { headers: { Authorization: `Bearer ${token}` } });
     return data?.data ?? [];
 }
 //# sourceMappingURL=metaAds.js.map

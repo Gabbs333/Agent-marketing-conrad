@@ -69,6 +69,30 @@ function parse(schema, body) {
     }
     return { ok: true, data: r.data };
 }
+/**
+ * Applique un statut cible (paused | active | stopped) sur la plateforme
+ * publicitaire externe, puis renvoie le message d'erreur éventuel.
+ * Meta : paused/active/stopped → PAUSED / ACTIVE / PAUSED.
+ * TikTok Ads : active → ENABLE, sinon DISABLE.
+ */
+async function setAdExternalStatus(platform, externalId, status) {
+    if (config_1.config.demoMode)
+        return null;
+    try {
+        if (platform === "meta") {
+            await metaAds.updateCampaignStatus(externalId, status === "active" ? "ACTIVE" : "PAUSED");
+        }
+        else if (platform === "tiktok") {
+            await tiktokAds.updateCampaignStatus(externalId, status === "active" ? "ENABLE" : "DISABLE");
+        }
+        return null;
+    }
+    catch (err) {
+        const msg = err.message;
+        console.error(`[ads] Statut ${status} impossible sur ${platform} (${externalId}) :`, msg);
+        return msg;
+    }
+}
 // ─── Schémas ──────────────────────────────────────────────────
 const campaignSchema = zod_1.z.object({
     name: zod_1.z.string().min(2),
@@ -755,10 +779,34 @@ async function adminRoutes(app) {
         const ad = await db_1.prisma.ad.findUnique({ where: { id: req.params.id } });
         if (!ad)
             return reply.code(404).send({ error: "Annonce introuvable" });
-        if (ad.platform === "meta" && ad.externalId && !config_1.config.demoMode) {
-            await metaAds.updateCampaignStatus(ad.externalId, "PAUSED").catch((err) => console.error("[ads] Pause Meta impossible :", err));
+        if (!config_1.config.demoMode && ad.externalId) {
+            const errs = await setAdExternalStatus(ad.platform, ad.externalId, "paused");
+            if (errs)
+                return reply.code(500).send({ error: errs });
         }
         return db_1.prisma.ad.update({ where: { id: ad.id }, data: { status: "paused" } });
+    });
+    app.post("/ads/:id/resume", async (req, reply) => {
+        const ad = await db_1.prisma.ad.findUnique({ where: { id: req.params.id } });
+        if (!ad)
+            return reply.code(404).send({ error: "Annonce introuvable" });
+        if (!config_1.config.demoMode && ad.externalId) {
+            const errs = await setAdExternalStatus(ad.platform, ad.externalId, "active");
+            if (errs)
+                return reply.code(500).send({ error: errs });
+        }
+        return db_1.prisma.ad.update({ where: { id: ad.id }, data: { status: "active" } });
+    });
+    app.post("/ads/:id/stop", async (req, reply) => {
+        const ad = await db_1.prisma.ad.findUnique({ where: { id: req.params.id } });
+        if (!ad)
+            return reply.code(404).send({ error: "Annonce introuvable" });
+        if (!config_1.config.demoMode && ad.externalId) {
+            const errs = await setAdExternalStatus(ad.platform, ad.externalId, "stopped");
+            if (errs)
+                return reply.code(500).send({ error: errs });
+        }
+        return db_1.prisma.ad.update({ where: { id: ad.id }, data: { status: "stopped" } });
     });
     // ─── Leads (capture publique) ───────────────────────────────
     app.post("/leads", async (req, reply) => {

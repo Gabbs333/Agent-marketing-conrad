@@ -1167,16 +1167,29 @@ $("#adCreateBtn").addEventListener("click", async () => {
 async function loadAds() {
   const r = await api("GET", "/ads");
   if (!r.ok) return;
+  const action = (a) => {
+    if (a.status === "active") {
+      return `<button class="btn ghost small" onclick="pauseAd('${a.id}')">Pause</button>
+              <button class="btn danger small" onclick="stopAd('${a.id}')">Stop</button>`;
+    }
+    if (a.status === "stopped") {
+      return `<button class="btn ghost small" onclick="resumeAd('${a.id}')">Relancer</button>`;
+    }
+    return `<button class="btn primary small" onclick="resumeAd('${a.id}')">Démarrer</button>
+            <button class="btn danger small" onclick="stopAd('${a.id}')">Stop</button>`;
+  };
   $("#adsTable tbody").innerHTML = (r.data || []).map((a) => `
     <tr>
       <td style="font-weight:600;color:var(--navy-900)">${esc(a.name)}</td>
       <td><span class="badge gold">${esc(a.platform)}</span></td>
       <td>${badge(a.status)}</td>
       <td>${a.budget ? a.budget + " €" : "—"}</td>
-      <td><button class="btn ghost small" onclick="pauseAd('${a.id}')">Pause</button></td>
+      <td>${action(a)}</td>
     </tr>`).join("") || '<tr><td colspan="5"><div class="empty"><div class="big">📣</div>Aucune annonce.</div></td></tr>';
 }
 window.pauseAd = async (id) => { await api("POST", `/ads/${id}/pause`, {}); toast("Annonce en pause", "ok"); loadAds(); };
+window.resumeAd = async (id) => { const r = await api("POST", `/ads/${id}/resume`, {}); toast(r.ok ? "Annonce relancée" : r.data?.error || "Erreur", r.ok ? "ok" : "err"); loadAds(); };
+window.stopAd = async (id) => { if (!confirm("Stopper définitivement cette annonce ?")) return; const r = await api("POST", `/ads/${id}/stop`, {}); toast(r.ok ? "Annonce stoppée" : r.data?.error || "Erreur", r.ok ? "ok" : "err"); loadAds(); };
 
 /* ════════════════ Intégrations ════════════════ */
 async function loadIntegrations() {

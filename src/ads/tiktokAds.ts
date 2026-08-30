@@ -114,3 +114,19 @@ export async function createAd(input: {
   });
   return { id: String(data.data?.ad_id ?? data.data?.id ?? "") };
 }
+
+/** Active (ENABLE) ou désactive (DISABLE) une campagne TikTok Ads. */
+export async function updateCampaignStatus(
+  campaignId: string,
+  status: "ENABLE" | "DISABLE",
+): Promise<void> {
+  if (!ready()) {
+    console.log(`[tiktokAds][demo] Campagne ${campaignId} → ${status}`);
+    return;
+  }
+  await call("/campaign/status/update/", {
+    advertiser_id: config.tiktokAds.advertiserId,
+    campaign_ids: [campaignId],
+    operation_status: status,
+  });
+}
