@@ -1,0 +1,70 @@
+/* Pages réglementaires — Conrad Grand Luxury Hotel */
+:root {
+  --navy-900: #101828;
+  --navy-700: #1f2c4c;
+  --gold-500: #c9a24b;
+  --gold-400: #d9b96a;
+  --ink: #2b2f36;
+  --muted: #6b7280;
+  --card: #ffffff;
+  --bg: #faf7f0;
+  --line: #e8e1d2;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.7;
+  font-size: 15.5px;
+}
+.legal-header {
+  background: linear-gradient(135deg, var(--navy-900) 0%, var(--navy-700) 100%);
+  color: #fff;
+  padding: 46px 24px 40px;
+  text-align: center;
+}
+.legal-header .crown { font-size: 30px; color: var(--gold-400); }
+.legal-header h1 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 30px;
+  letter-spacing: .02em;
+  margin-top: 8px;
+}
+.legal-header .sub { color: #c9cfdb; font-size: 13.5px; margin-top: 6px; }
+.legal-header .updated { color: var(--gold-400); font-size: 12.5px; margin-top: 10px; }
+.wrap { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 28px 32px;
+  box-shadow: 0 1px 4px rgba(16, 24, 40, .05);
+}
+h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  color: var(--navy-900);
+  margin: 30px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+h2:first-child { margin-top: 0; }
+p, li { margin-bottom: 10px; }
+ul { padding-left: 22px; }
+a { color: var(--navy-700); text-decoration: underline; text-decoration-color: var(--gold-500); }
+strong { color: var(--navy-900); }
+.toc { background: #f4efe3; border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; font-size: 14px; }
+.toc a { color: var(--navy-700); }
+.placeholder {
+  background: #fff8e1;
+  border: 1px dashed #d9b96a;
+  border-radius: 6px;
+  padding: 0 6px;
+  font-weight: 600;
+  color: #8a6a2a;
+  white-space: nowrap;
+}
+.footer-note { text-align: center; color: var(--muted); font-size: 13px; margin-top: 28px; }
+.legal-nav { text-align: center; margin-top: 26px; font-size: 14px; }
+.legal-nav a { margin: 0 10px; color: var(--navy-700); }
