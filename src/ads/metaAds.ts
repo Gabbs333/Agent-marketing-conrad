@@ -102,6 +102,9 @@ export async function createAdSet(input: MetaAdSetInput): Promise<{ id: string }
     // est obligatoire (LOWEST_COST_WITHOUT_CAP est ignoré par l'API dans ce cas).
     bid_strategy: input.bidStrategy ?? "TARGET_COST",
     bid_amount: String(input.bidAmount ?? 500),
+    // Règlement DSA (UE) : l'annonceur promeut sa propre entité.
+    dsa_beneficiary: "self",
+    dsa_payor: "self",
     targeting: JSON.stringify(targeting),
     status: "PAUSED",
   };
