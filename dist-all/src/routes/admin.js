@@ -40,6 +40,7 @@ const zod_1 = require("zod");
 const config_1 = require("../config");
 const db_1 = require("../db");
 const textGenerator_1 = require("../content/textGenerator");
+const targeting_1 = require("../ads/targeting");
 const imageGenerator_1 = require("../content/imageGenerator");
 const mediaCollector_1 = require("../content/mediaCollector");
 const videoGenerator_1 = require("../content/videoGenerator");
@@ -721,12 +722,13 @@ async function adminRoutes(app) {
                 objective: p.data.objective,
                 dailyBudget: p.data.budget,
             });
-            // Ciblage : manuel (dashboard) → proposé par l'IA → défaut config
+            // Ciblage : manuel (dashboard) → proposé par l'IA (granulaire, IDs
+            // résolus via Targeting Search) → défaut config
             let targeting = p.data.targeting;
             if (!targeting) {
                 try {
                     targeting =
-                        (await (0, textGenerator_1.generateAdTargeting)({
+                        (await (0, targeting_1.buildAiTargeting)({
                             topic: p.data.name,
                             objective: p.data.objective ?? "awareness",
                         })) ?? undefined;

@@ -65,7 +65,9 @@ export async function createCampaign(input: MetaCampaignInput): Promise<{ id: st
     objective: input.objective ?? "OUTCOME_TRAFFIC",
     status: input.status ?? "PAUSED",
   };
-  if (input.dailyBudget) body.daily_budget = String(input.dailyBudget);
+  // Les budgets de l'API interne sont en unités entières (€) ;
+  // Meta attend des centimes (daily_budget=300 → 3,00 €/jour).
+  if (input.dailyBudget) body.daily_budget = String(Math.round(input.dailyBudget * 100));
   else body.is_adset_budget_sharing_enabled = "false";
   if (input.startDate) body.start_time = input.startDate.toISOString();
   if (input.endDate) body.stop_time = input.endDate.toISOString();
@@ -105,7 +107,8 @@ export async function createAdSet(input: MetaAdSetInput): Promise<{ id: string }
   };
   // ⚠️ Pas de daily_budget ici si la campagne porte déjà un budget
   // (Advantage Campaign Budget) : Meta rejette la double définition.
-  if (input.dailyBudget) body.daily_budget = String(input.dailyBudget);
+  // S'il est fourni : unités entières (€) → centimes.
+  if (input.dailyBudget) body.daily_budget = String(Math.round(input.dailyBudget * 100));
 
   const data = await httpJson(`${GRAPH_URL}/${account}/adsets`, {
     method: "POST",

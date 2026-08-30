@@ -40,6 +40,7 @@ exports.syncPerformance = syncPerformance;
 const config_1 = require("./config");
 const db_1 = require("./db");
 const textGenerator_1 = require("./content/textGenerator");
+const targeting_1 = require("./ads/targeting");
 const imageGenerator_1 = require("./content/imageGenerator");
 const videoGenerator_1 = require("./content/videoGenerator");
 const mediaCollector_1 = require("./content/mediaCollector");
@@ -240,7 +241,7 @@ async function runCampaign(campaignId, opts = {}) {
             const adset = await metaAds.createAdSet({
                 campaignId: mc.id,
                 name: `${campaign.name} — Ad Set`,
-                targeting: (await (0, textGenerator_1.generateAdTargeting)({
+                targeting: (await (0, targeting_1.buildAiTargeting)({
                     topic,
                     objective: campaign.objective,
                 }).catch((err) => {
