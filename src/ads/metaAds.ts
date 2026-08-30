@@ -168,6 +168,20 @@ export async function uploadPageVideo(filePath: string): Promise<string> {
   return id;
 }
 
+/** Lien click-to-chat WhatsApp (numéro du réceptionniste par défaut). */
+function whatsAppLink(): string | null {
+  const phone = config.facebook.whatsappCtaPhone?.replace(/[^0-9]/g, "");
+  if (!config.facebook.whatsappCtaEnabled || !phone) return null;
+  return `https://wa.me/${phone}`;
+}
+
+/** Ajoute la ligne WhatsApp en fin de légende. */
+function withWhatsAppLine(text: string): string {
+  const link = whatsAppLink();
+  if (!link) return text;
+  return `${text.trim()}\n\n📲 Contactez-nous sur WhatsApp : ${link}`;
+}
+
 export async function createAdCreative(input: MetaCreativeInput): Promise<{ id: string }> {
   if (config.demoMode || !config.metaAds.accessToken) {
     return { id: `demo_cr_${Date.now()}` };
@@ -176,12 +190,14 @@ export async function createAdCreative(input: MetaCreativeInput): Promise<{ id: 
   const pageId = config.facebook.pageId;
   if (!pageId) throw new Error("FB_PAGE_ID manquant pour le créatif publicitaire");
 
+  const destLink = whatsAppLink() ?? input.link ?? config.hotel.website;
+
   const linkData: Record<string, unknown> = {
-    message: input.message,
-    link: input.link ?? config.hotel.website,
+    message: withWhatsAppLine(input.message),
+    link: destLink,
     call_to_action: {
-      type: "LEARN_MORE",
-      value: { link: input.link ?? config.hotel.website },
+      type: input.cta ?? "LEARN_MORE",
+      value: { link: destLink },
     },
   };
   if (input.mediaPath) {
