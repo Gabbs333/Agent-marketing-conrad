@@ -93,6 +93,12 @@ export async function createAdSet(input: MetaAdSetInput): Promise<{ id: string }
       age_min: config.adsTargeting.ageMin,
       age_max: config.adsTargeting.ageMax,
     };
+  // Meta exige le flag Advantage Audience DANS la spec targeting
+  // (0 = on conserve le ciblage manuel/IA tel quel).
+  const targetingWithAutomation = {
+    ...targeting,
+    targeting_automation: { advantage_audience: 0 },
+  };
   const body: Record<string, string> = {
     name: input.name,
     campaign_id: input.campaignId,
@@ -105,9 +111,7 @@ export async function createAdSet(input: MetaAdSetInput): Promise<{ id: string }
     // Règlement DSA (UE) : l'annonceur promeut sa propre entité.
     dsa_beneficiary: "self",
     dsa_payor: "self",
-    // Audience Advantage+ : désactivée pour conserver le ciblage manuel/IA.
-    targeting_automation: JSON.stringify({ advantage_audience: 0 }),
-    targeting: JSON.stringify(targeting),
+    targeting: JSON.stringify(targetingWithAutomation),
     status: "PAUSED",
   };
   // ⚠️ Pas de daily_budget ici si la campagne porte déjà un budget
