@@ -94,6 +94,15 @@ export const config = {
     accessToken: get("META_ACCESS_TOKEN"),
     adAccountId: get("META_AD_ACCOUNT_ID"),
   },
+  /** Ciblage publicitaire par défaut (utilisé si aucun ciblage manuel ni IA). */
+  adsTargeting: {
+    countries: get("ADS_TARGETING_COUNTRIES", "CM")
+      .split(",")
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean),
+    ageMin: Number(get("ADS_TARGETING_AGE_MIN", "25")),
+    ageMax: Number(get("ADS_TARGETING_AGE_MAX", "65")),
+  },
   tiktok: {
     clientKey: get("TIKTOK_CLIENT_KEY"),
     clientSecret: get("TIKTOK_CLIENT_SECRET"),

@@ -45,6 +45,8 @@ async function createCampaign(input) {
     };
     if (input.dailyBudget)
         body.daily_budget = String(input.dailyBudget);
+    else
+        body.is_adset_budget_sharing_enabled = "false";
     if (input.startDate)
         body.start_time = input.startDate.toISOString();
     if (input.endDate)
@@ -63,15 +65,25 @@ async function createAdSet(input) {
         return { id: `demo_ms_${Date.now()}` };
     }
     const { token, account } = requireAccount();
-    const targeting = input.targeting ?? { geo_locations: { countries: ["FR"] }, age_min: 25, age_max: 65 };
+    const targeting = input.targeting ?? {
+        geo_locations: { countries: config_1.config.adsTargeting.countries },
+        age_min: config_1.config.adsTargeting.ageMin,
+        age_max: config_1.config.adsTargeting.ageMax,
+    };
     const body = {
         name: input.name,
         campaign_id: input.campaignId,
         billing_event: input.billingEvent ?? "IMPRESSIONS",
         optimization_goal: input.optimizationGoal ?? "REACH",
+        // Compte avec stratégie d'enchère TARGET_COST par défaut : un bid_amount
+        // est obligatoire (LOWEST_COST_WITHOUT_CAP est ignoré par l'API dans ce cas).
+        bid_strategy: input.bidStrategy ?? "TARGET_COST",
+        bid_amount: String(input.bidAmount ?? 500),
         targeting: JSON.stringify(targeting),
         status: "PAUSED",
     };
+    // ⚠️ Pas de daily_budget ici si la campagne porte déjà un budget
+    // (Advantage Campaign Budget) : Meta rejette la double définition.
     if (input.dailyBudget)
         body.daily_budget = String(input.dailyBudget);
     const data = await (0, http_1.httpJson)(`${GRAPH_URL}/${account}/adsets`, {

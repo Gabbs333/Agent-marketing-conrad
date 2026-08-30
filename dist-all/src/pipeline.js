@@ -240,7 +240,13 @@ async function runCampaign(campaignId, opts = {}) {
             const adset = await metaAds.createAdSet({
                 campaignId: mc.id,
                 name: `${campaign.name} — Ad Set`,
-                dailyBudget: campaign.budget,
+                targeting: (await (0, textGenerator_1.generateAdTargeting)({
+                    topic,
+                    objective: campaign.objective,
+                }).catch((err) => {
+                    summary.errors.push(`Ciblage IA : ${err.message}`);
+                    return null;
+                })) ?? undefined,
             });
             const creative = await metaAds.createAdCreative({
                 name: `${campaign.name} — Créatif`,

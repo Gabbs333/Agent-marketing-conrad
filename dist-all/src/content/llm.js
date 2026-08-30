@@ -37,7 +37,9 @@ function resolveLlm() {
     const provider = config_1.config.llm.provider.toLowerCase();
     if (provider !== "auto")
         return pick(provider);
-    for (const name of ["openai", "anthropic", "gemini", "groq", "mistral", "openrouter", "deepseek", "together"]) {
+    // DeepSeek avant Groq : ici Groq sert uniquement à la voix off (TTS),
+    // tandis que DeepSeek est le LLM de texte préféré en production.
+    for (const name of ["openai", "anthropic", "gemini", "deepseek", "groq", "mistral", "openrouter", "together"]) {
         const r = pick(name);
         if (r)
             return r;

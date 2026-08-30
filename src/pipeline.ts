@@ -1,6 +1,6 @@
 import { config } from "./config";
 import { prisma } from "./db";
-import { generateAdCopy, generatePostText, generateVideoScript } from "./content/textGenerator";
+import { generateAdCopy, generateAdTargeting, generatePostText, generateVideoScript } from "./content/textGenerator";
 import { generateImage } from "./content/imageGenerator";
 import { generateCampaignVideo } from "./content/videoGenerator";
 import { collectMediaFromSite } from "./content/mediaCollector";
@@ -240,6 +240,14 @@ export async function runCampaign(
       const adset = await metaAds.createAdSet({
         campaignId: mc.id,
         name: `${campaign.name} — Ad Set`,
+        targeting:
+          (await generateAdTargeting({
+            topic,
+            objective: campaign.objective,
+          }).catch((err) => {
+            summary.errors.push(`Ciblage IA : ${(err as Error).message}`);
+            return null;
+          })) ?? undefined,
       });
       const creative = await metaAds.createAdCreative({
         name: `${campaign.name} — Créatif`,

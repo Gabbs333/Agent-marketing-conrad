@@ -6,6 +6,7 @@ import { config } from "../config";
 import { prisma } from "../db";
 import {
   generateAdCopy,
+  generateAdTargeting,
   generateEmailContent,
   generatePostText,
   generateVideoScript,
@@ -745,10 +746,23 @@ export async function adminRoutes(app: FastifyInstance) {
         objective: p.data.objective,
         dailyBudget: p.data.budget,
       });
+      // Ciblage : manuel (dashboard) → proposé par l'IA → défaut config
+      let targeting: Record<string, unknown> | undefined = p.data.targeting;
+      if (!targeting) {
+        try {
+          targeting =
+            (await generateAdTargeting({
+              topic: p.data.name,
+              objective: p.data.objective ?? "awareness",
+            })) ?? undefined;
+        } catch (err) {
+          console.error("[ads] Ciblage IA indisponible, défaut config utilisé :", err);
+        }
+      }
       const adset = await metaAds.createAdSet({
         campaignId: mc.id,
         name: `${p.data.name} — Ad Set`,
-        targeting: p.data.targeting,
+        targeting,
       });
       const asset = await resolveMediaAsset(p.data.mediaId);
       const creative = await metaAds.createAdCreative({
@@ -772,7 +786,7 @@ export async function adminRoutes(app: FastifyInstance) {
           platform: "meta",
           name: p.data.name,
           budget: p.data.budget ?? null,
-          targeting: p.data.targeting ? JSON.stringify(p.data.targeting) : null,
+          targeting: targeting ? JSON.stringify(targeting) : null,
           externalId: ad.id,
           creativeId: creative.id,
           mediaUrl: asset?.url ?? null,

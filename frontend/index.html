@@ -1223,6 +1223,11 @@ function openAdModal() {
         <div class="field"><label>Plateforme</label><select id="adPlatform"><option value="meta">Meta</option><option value="tiktok">TikTok</option></select></div>
         <div class="field"><label>Budget (€/jour)</label><input id="adBudget" type="number" min="1"/></div>
       </div>
+      <div class="grid" style="margin-top:12px">
+        <div class="field"><label>Pays ciblés (codes ISO, optionnel)</label><input id="adCountries" placeholder="CM — vide = ciblage choisi par l'IA"/></div>
+        <div class="field"><label>Âge min</label><input id="adAgeMin" type="number" min="18" max="65" placeholder="25"/></div>
+        <div class="field"><label>Âge max</label><input id="adAgeMax" type="number" min="18" max="65" placeholder="65"/></div>
+      </div>
       <div class="field" style="margin-top:12px"><label>Visuel publicitaire</label>${mediaPickerHtml(window.__pickedMedia)}</div>
       <div class="modal-actions">
         <button class="btn ghost" onclick="closeModal()">Annuler</button>
@@ -1234,7 +1239,17 @@ function openAdModal() {
       if (!name || !budget) return toast("Nom et budget requis", "err");
       const platform = $("#adPlatform").value;
       const mediaId = (window.__pickedMedia || [])[0];
-      const r = await api("POST", platform === "meta" ? "/ads/meta" : "/ads/tiktok", { name, budget: Number(budget), mediaId });
+      const countries = $("#adCountries").value.split(",").map((s) => s.trim().toUpperCase()).filter((s) => /^[A-Z]{2}$/.test(s));
+      const ageMin = $("#adAgeMin").value, ageMax = $("#adAgeMax").value;
+      let targeting;
+      if (countries.length || ageMin || ageMax) {
+        targeting = {
+          geo_locations: { countries: countries.length ? countries : ["CM"] },
+          age_min: Math.max(18, Number(ageMin) || 25),
+          age_max: Math.min(65, Number(ageMax) || 65),
+        };
+      }
+      const r = await api("POST", platform === "meta" ? "/ads/meta" : "/ads/tiktok", { name, budget: Number(budget), mediaId, targeting });
       toast(r.ok ? "📣 Annonce créée" : r.data?.error || "Erreur", r.ok ? "ok" : "err");
       closeModal(); if (r.ok) loadAds();
     });

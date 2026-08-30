@@ -86,7 +86,11 @@ export async function createAdSet(input: MetaAdSetInput): Promise<{ id: string }
   }
   const { token, account } = requireAccount();
   const targeting =
-    input.targeting ?? { geo_locations: { countries: ["FR"] }, age_min: 25, age_max: 65 };
+    input.targeting ?? {
+      geo_locations: { countries: config.adsTargeting.countries },
+      age_min: config.adsTargeting.ageMin,
+      age_max: config.adsTargeting.ageMax,
+    };
   const body: Record<string, string> = {
     name: input.name,
     campaign_id: input.campaignId,
