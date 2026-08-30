@@ -1,3 +1,4 @@
+import { formatAdAccountId } from "../ads/metaAds";
 import { config } from "../config";
 import { httpJson } from "../lib/http";
 import { validatePageToken } from "../social/facebook";
@@ -80,8 +81,9 @@ export async function getIntegrationStatus(): Promise<IntegrationStatus[]> {
     let detail = notConfigured;
     if (configured && !demo) {
       const r = await safe(async () => {
+        const actId = formatAdAccountId(config.metaAds.adAccountId);
         const data = await httpJson(
-          `${GRAPH_URL}/act_${config.metaAds.adAccountId}?fields=name`,
+          `${GRAPH_URL}/${actId}?fields=name`,
           { headers: { Authorization: `Bearer ${config.metaAds.accessToken}` } },
         );
         return String(data.name ?? "compte publicitaire");

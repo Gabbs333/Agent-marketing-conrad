@@ -39,12 +39,17 @@ export interface MetaCreativeInput {
   cta?: string;
 }
 
+export function formatAdAccountId(id: string): string {
+  const clean = id.trim().replace(/^act_/i, "");
+  return `act_${clean}`;
+}
+
 function requireAccount(): { token: string; account: string } {
   if (config.demoMode || !config.metaAds.accessToken) {
     throw new Error("META_ACCESS_TOKEN manquant (ou DEMO_MODE=true sans API réelle)");
   }
   if (!config.metaAds.adAccountId) throw new Error("META_AD_ACCOUNT_ID manquant");
-  return { token: config.metaAds.accessToken, account: config.metaAds.adAccountId };
+  return { token: config.metaAds.accessToken, account: formatAdAccountId(config.metaAds.adAccountId) };
 }
 
 export async function createCampaign(input: MetaCampaignInput): Promise<{ id: string }> {
@@ -64,7 +69,7 @@ export async function createCampaign(input: MetaCampaignInput): Promise<{ id: st
 
   const params = new URLSearchParams(body);
   params.append("special_ad_categories", "[]");
-  const data = await httpJson(`${GRAPH_URL}/act_${account}/campaigns`, {
+  const data = await httpJson(`${GRAPH_URL}/${account}/campaigns`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: params,
@@ -89,7 +94,7 @@ export async function createAdSet(input: MetaAdSetInput): Promise<{ id: string }
   };
   if (input.dailyBudget) body.daily_budget = String(input.dailyBudget);
 
-  const data = await httpJson(`${GRAPH_URL}/act_${account}/adsets`, {
+  const data = await httpJson(`${GRAPH_URL}/${account}/adsets`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: new URLSearchParams(body),
@@ -104,7 +109,7 @@ export async function uploadAdImage(filePath: string): Promise<string> {
   const path = resolveMediaPath(filePath);
   const form = new FormData();
   form.append("filename", await fileBlob(path), basename(path));
-  const data = await httpJson(`${GRAPH_URL}/act_${account}/adimages`, {
+  const data = await httpJson(`${GRAPH_URL}/${account}/adimages`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: form,
@@ -143,7 +148,7 @@ export async function createAdCreative(input: MetaCreativeInput): Promise<{ id: 
     name: input.name,
     object_story_spec: JSON.stringify({ page_id: pageId, link_data: linkData }),
   });
-  const data = await httpJson(`${GRAPH_URL}/act_${account}/adcreatives`, {
+  const data = await httpJson(`${GRAPH_URL}/${account}/adcreatives`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body,
@@ -166,7 +171,7 @@ export async function createAd(input: {
     status: "PAUSED",
     creative: JSON.stringify({ creative_id: input.creativeId }),
   });
-  const data = await httpJson(`${GRAPH_URL}/act_${account}/ads`, {
+  const data = await httpJson(`${GRAPH_URL}/${account}/ads`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body,
@@ -191,7 +196,7 @@ export async function listCampaigns(): Promise<unknown[]> {
   if (config.demoMode || !config.metaAds.accessToken) return [];
   const { token, account } = requireAccount();
   const data = await httpJson(
-    `${GRAPH_URL}/act_${account}/campaigns?fields=id,name,status,objective,daily_budget`,
+    `${GRAPH_URL}/${account}/campaigns?fields=id,name,status,objective,daily_budget`,
     { headers: { Authorization: `Bearer ${token}` } },
   );
   return data?.data ?? [];
