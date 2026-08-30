@@ -85,6 +85,10 @@ export const config = {
     pageToken: get("FB_PAGE_TOKEN"),
     appId: get("FB_APP_ID"),
     appSecret: get("FB_APP_SECRET"),
+    /** Bouton WhatsApp par défaut sur les publications : numéro international sans « + ». */
+    whatsappCtaPhone: get("FB_WHATSAPP_CTA_PHONE", "237653478556"),
+    /** Active/désactive le CTA WhatsApp + la ligne wa.me dans les légendes. */
+    whatsappCtaEnabled: get("FB_WHATSAPP_CTA", "true").toLowerCase() === "true",
   },
   metaAds: {
     accessToken: get("META_ACCESS_TOKEN"),

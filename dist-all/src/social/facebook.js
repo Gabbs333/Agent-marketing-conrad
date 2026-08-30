@@ -17,9 +17,24 @@ const http_1 = require("../lib/http");
  *  - statistiques de posts (insights).
  */
 const GRAPH_URL = "https://graph.facebook.com/v20.0";
+/** Lien click-to-chat WhatsApp (numéro du réceptionniste par défaut). */
+function whatsAppLink() {
+    const phone = config_1.config.facebook.whatsappCtaPhone?.replace(/[^0-9]/g, "");
+    if (!config_1.config.facebook.whatsappCtaEnabled || !phone)
+        return null;
+    return `https://wa.me/${phone}`;
+}
+/** Ajoute la ligne WhatsApp en fin de légende (photos/vidéos, sans bouton CTA possible). */
+function withWhatsAppLine(text) {
+    const link = whatsAppLink();
+    if (!link)
+        return text;
+    return `${text.trim()}\n\n📲 Contactez-nous sur WhatsApp : ${link}`;
+}
 async function publishToFacebook(input) {
+    const waLink = whatsAppLink();
     if (config_1.config.demoMode || !config_1.config.facebook.pageToken) {
-        console.log(`[facebook][demo] Publication simulée : ${input.text.slice(0, 80)}${input.mediaPath ? ` (média : ${input.mediaPath})` : ""}`);
+        console.log(`[facebook][demo] Publication simulée : ${input.text.slice(0, 80)}${input.mediaPath ? ` (média : ${input.mediaPath})` : ""}${waLink ? ` — CTA WhatsApp ${waLink}` : ""}`);
         return { id: `demo_fb_${Date.now()}`, scheduled: !!input.scheduledAt };
     }
     const pageId = config_1.config.facebook.pageId;
@@ -38,7 +53,7 @@ async function publishToFacebook(input) {
             else {
                 form.append("source", await (0, files_1.fileBlob)(mediaPath), (0, node_path_1.basename)(mediaPath));
             }
-            form.append("description", input.text);
+            form.append("description", withWhatsAppLine(input.text));
             if (scheduled) {
                 form.append("published", "false");
                 form.append("scheduled_publish_time", String(scheduled));
@@ -58,7 +73,7 @@ async function publishToFacebook(input) {
         else {
             form.append("source", await (0, files_1.fileBlob)(mediaPath), (0, node_path_1.basename)(mediaPath));
         }
-        form.append("caption", input.text);
+        form.append("caption", withWhatsAppLine(input.text));
         if (scheduled) {
             form.append("published", "false");
             form.append("scheduled_publish_time", String(scheduled));
@@ -70,8 +85,15 @@ async function publishToFacebook(input) {
         });
         return { id: String(data.id ?? data.post_id ?? ""), scheduled: !!scheduled };
     }
-    // Texte seul
+    // Texte seul : bouton CTA « Envoyer un message WhatsApp » (vérifié avec l'API Graph)
     const body = { message: input.text };
+    if (waLink) {
+        body.link = waLink;
+        body.call_to_action = JSON.stringify({
+            type: "WHATSAPP_MESSAGE",
+            value: { link: waLink },
+        });
+    }
     if (scheduled) {
         body.published = "false";
         body.scheduled_publish_time = String(scheduled);

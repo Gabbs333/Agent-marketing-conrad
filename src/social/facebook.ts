@@ -20,10 +20,25 @@ export interface FacebookPublishInput {
   scheduledAt?: Date;
 }
 
+/** Lien click-to-chat WhatsApp (numéro du réceptionniste par défaut). */
+function whatsAppLink(): string | null {
+  const phone = config.facebook.whatsappCtaPhone?.replace(/[^0-9]/g, "");
+  if (!config.facebook.whatsappCtaEnabled || !phone) return null;
+  return `https://wa.me/${phone}`;
+}
+
+/** Ajoute la ligne WhatsApp en fin de légende (photos/vidéos, sans bouton CTA possible). */
+function withWhatsAppLine(text: string): string {
+  const link = whatsAppLink();
+  if (!link) return text;
+  return `${text.trim()}\n\n📲 Contactez-nous sur WhatsApp : ${link}`;
+}
+
 export async function publishToFacebook(input: FacebookPublishInput): Promise<PublishResult> {
+  const waLink = whatsAppLink();
   if (config.demoMode || !config.facebook.pageToken) {
     console.log(
-      `[facebook][demo] Publication simulée : ${input.text.slice(0, 80)}${input.mediaPath ? ` (média : ${input.mediaPath})` : ""}`,
+      `[facebook][demo] Publication simulée : ${input.text.slice(0, 80)}${input.mediaPath ? ` (média : ${input.mediaPath})` : ""}${waLink ? ` — CTA WhatsApp ${waLink}` : ""}`,
     );
     return { id: `demo_fb_${Date.now()}`, scheduled: !!input.scheduledAt };
   }
@@ -44,7 +59,7 @@ export async function publishToFacebook(input: FacebookPublishInput): Promise<Pu
       } else {
         form.append("source", await fileBlob(mediaPath), basename(mediaPath));
       }
-      form.append("description", input.text);
+      form.append("description", withWhatsAppLine(input.text));
       if (scheduled) {
         form.append("published", "false");
         form.append("scheduled_publish_time", String(scheduled));
@@ -64,7 +79,7 @@ export async function publishToFacebook(input: FacebookPublishInput): Promise<Pu
     } else {
       form.append("source", await fileBlob(mediaPath), basename(mediaPath));
     }
-    form.append("caption", input.text);
+    form.append("caption", withWhatsAppLine(input.text));
     if (scheduled) {
       form.append("published", "false");
       form.append("scheduled_publish_time", String(scheduled));
@@ -77,8 +92,15 @@ export async function publishToFacebook(input: FacebookPublishInput): Promise<Pu
     return { id: String(data.id ?? data.post_id ?? ""), scheduled: !!scheduled };
   }
 
-  // Texte seul
+  // Texte seul : bouton CTA « Envoyer un message WhatsApp » (vérifié avec l'API Graph)
   const body: Record<string, string> = { message: input.text };
+  if (waLink) {
+    body.link = waLink;
+    body.call_to_action = JSON.stringify({
+      type: "WHATSAPP_MESSAGE",
+      value: { link: waLink },
+    });
+  }
   if (scheduled) {
     body.published = "false";
     body.scheduled_publish_time = String(scheduled);
