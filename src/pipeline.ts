@@ -25,6 +25,8 @@ export interface RunCampaignOptions {
   publishNow?: boolean;
   withVideo?: boolean;
   withAds?: boolean;
+  /** Médias choisis manuellement depuis la médiathèque (prioritaires). */
+  mediaIds?: string[];
 }
 
 export interface PipelineSummary {
@@ -121,10 +123,31 @@ export async function runCampaign(
     summary.posts.push({ id: post.id, platform, status: post.status });
   }
 
-  // 2. Médias de campagne : les images de la médiathèque sont choisies
-  //    par pertinence avec le sujet (catégories/tags/légendes), sinon
-  //    collecte du site, sinon génération IA.
-  let libraryImages: GeneratedImage[] = await selectMediaForTopic(topic, 6);
+  // 2. Médias de campagne : les médias choisis manuellement depuis le
+  //    dashboard sont prioritaires ; sinon les images de la médiathèque sont
+  //    choisies par pertinence avec le sujet (catégories/tags/légendes),
+  //    sinon collecte du site, sinon génération IA.
+  let libraryImages: GeneratedImage[];
+  if (opts.mediaIds?.length) {
+    const chosen = await prisma.mediaAsset.findMany({
+      where: { id: { in: opts.mediaIds } },
+      orderBy: { createdAt: "desc" },
+    });
+    // L'ordre du tableau mediaIds prime sur l'ordre de la requête
+    const byId = new Map(chosen.map((a) => [a.id, a]));
+    libraryImages = opts.mediaIds
+      .map((id) => byId.get(id))
+      .filter((a): a is NonNullable<typeof a> => !!a)
+      .map((a) => ({
+        id: a.id,
+        url: a.url,
+        localPath: a.localPath ?? "",
+        provider: "library",
+      }));
+    summary.media.push(...chosen.map((a) => ({ id: a.id, type: a.type })));
+  } else {
+    libraryImages = await selectMediaForTopic(topic, 6);
+  }
 
   if (libraryImages.length === 0 && /^https?:\/\//.test(config.hotel.website)) {
     try {
@@ -238,6 +261,8 @@ export async function runCampaign(
           budget: campaign.budget,
           externalId: ad.id,
           creativeId: creative.id,
+          mediaUrl: image.url,
+          mediaType: "image",
           status: "paused",
         },
       });
@@ -276,6 +301,8 @@ export async function runCampaign(
           name: `${campaign.name} — Annonce`,
           budget: campaign.budget,
           externalId: ta.id,
+          mediaUrl: tt?.mediaUrl ?? null,
+          mediaType: tt?.mediaType ?? null,
           status: "paused",
         },
       });

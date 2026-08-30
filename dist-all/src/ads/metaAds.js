@@ -4,6 +4,7 @@ exports.formatAdAccountId = formatAdAccountId;
 exports.createCampaign = createCampaign;
 exports.createAdSet = createAdSet;
 exports.uploadAdImage = uploadAdImage;
+exports.uploadPageVideo = uploadPageVideo;
 exports.createAdCreative = createAdCreative;
 exports.createAd = createAd;
 exports.updateCampaignStatus = updateCampaignStatus;
@@ -99,6 +100,32 @@ async function uploadAdImage(filePath) {
         throw new Error(`Upload image publicitaire échoué : ${JSON.stringify(data).slice(0, 300)}`);
     return hash;
 }
+/** Upload d'une vidéo sur la bibliothèque vidéo de la page → video_id pour les créatifs. */
+async function uploadPageVideo(filePath) {
+    if (config_1.config.demoMode || !config_1.config.metaAds.accessToken)
+        return `demo_video_${Date.now()}`;
+    const pageId = config_1.config.facebook.pageId;
+    const token = config_1.config.facebook.pageToken;
+    if (!pageId || !token)
+        throw new Error("FB_PAGE_ID / FB_PAGE_TOKEN manquants pour uploader la vidéo");
+    const path = (0, files_1.resolveMediaPath)(filePath);
+    const form = new FormData();
+    if (path.startsWith("http")) {
+        form.append("file_url", path);
+    }
+    else {
+        form.append("source", await (0, files_1.fileBlob)(path), (0, node_path_1.basename)(path));
+    }
+    const data = await (0, http_1.httpJson)(`${GRAPH_URL}/${pageId}/videos`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+    });
+    const id = String(data.id ?? "");
+    if (!id)
+        throw new Error(`Upload vidéo page échoué : ${JSON.stringify(data).slice(0, 300)}`);
+    return id;
+}
 async function createAdCreative(input) {
     if (config_1.config.demoMode || !config_1.config.metaAds.accessToken) {
         return { id: `demo_cr_${Date.now()}` };
@@ -117,7 +144,7 @@ async function createAdCreative(input) {
     };
     if (input.mediaPath) {
         if (input.mediaType === "video") {
-            linkData.video_id = (0, files_1.resolveMediaPath)(input.mediaPath);
+            linkData.video_id = await uploadPageVideo(input.mediaPath);
         }
         else {
             linkData.image_hash = await uploadAdImage(input.mediaPath);

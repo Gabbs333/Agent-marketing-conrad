@@ -126,6 +126,15 @@
   .media-item .thumb { aspect-ratio:4/3; width:100%; object-fit:cover; display:block; background:#EFE9DC; }
   .media-item .meta { padding:9px 12px; font-size:.72rem; color:var(--muted); display:flex; justify-content:space-between; align-items:center; }
 
+  /* ── Sélecteur de médias (campagnes & annonces) ── */
+  .media-picker { display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:10px; max-height:230px; overflow-y:auto; padding:10px; border:1.5px solid var(--line); border-radius:var(--r-md); background:#FBF8F1; }
+  .picker-item { position:relative; border-radius:10px; overflow:hidden; cursor:pointer; border:2.5px solid transparent; transition:border-color .15s, transform .15s; }
+  .picker-item:hover { transform:translateY(-2px); }
+  .picker-item.active { border-color:var(--gold); box-shadow:0 0 0 3px #D9B36A55; }
+  .picker-item .thumb { aspect-ratio:4/3; width:100%; object-fit:cover; display:block; background:#EFE9DC; }
+  .picker-badge { position:absolute; top:5px; right:5px; background:#FFFFFFE6; border-radius:7px; padding:1px 5px; font-size:.72rem; }
+  .picker-cat { position:absolute; bottom:5px; left:5px; background:#1F2A44CC; color:#fff; border-radius:6px; padding:1px 6px; font-size:.62rem; }
+
   /* ── Pipeline leads ── */
   .pipeline { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; }
   .pcol { background:#F8F4EA; border-radius:var(--r-md); padding:12px; min-height:180px; }
@@ -381,15 +390,13 @@
         <div class="panel">
           <div class="section-head"><h2>Nouvelle annonce</h2></div>
           <div class="grid">
-            <div class="field"><label>Nom</label><input id="adName" placeholder="Annonce été"/></div>
-            <div class="field"><label>Plateforme</label><select id="adPlatform"><option value="meta">Meta</option><option value="tiktok">TikTok</option></select></div>
-            <div class="field"><label>Budget (€/jour)</label><input id="adBudget" type="number" min="1"/></div>
-            <div class="field"><label>&nbsp;</label><button class="btn primary" id="adCreateBtn">Créer l'annonce</button></div>
+            <div class="field" style="grid-column:span 3"><div class="desc">Choisissez le visuel depuis la médiathèque : photo pour Meta, vidéo pour TikTok.</div></div>
+            <div class="field"><label>&nbsp;</label><button class="btn primary" id="adCreateBtn">+ Nouvelle annonce</button></div>
           </div>
         </div>
         <div class="panel">
           <div class="section-head"><h2>Annonces existantes</h2></div>
-          <div class="tbl-wrap"><table id="adsTable"><thead><tr><th>Nom</th><th>Plateforme</th><th>Statut</th><th>Budget</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+          <div class="tbl-wrap"><table id="adsTable"><thead><tr><th>Visuel</th><th>Nom</th><th>Plateforme</th><th>Statut</th><th>Budget</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
         </div>
       </section>
 
@@ -595,19 +602,62 @@ $("#qaNurture").addEventListener("click", async () => {
   toast(r.ok ? `💬 Nurturing : ${r.data.sent} message(s) envoyé(s)` : r.data?.error || "Erreur", r.ok ? "ok" : "err");
 });
 
+/* ════════════════ Sélecteur de médias ════════════════ */
+window.__pickedMedia = [];
+async function ensureMediaLoaded() {
+  if (!window.__media || !window.__media.length) {
+    const r = await api("GET", "/media");
+    if (r.ok) window.__media = r.data || [];
+  }
+  return window.__media || [];
+}
+function mediaPickerHtml(selected) {
+  const list = window.__media || [];
+  const multi = Array.isArray(selected);
+  const sel = multi ? selected : [selected].filter(Boolean);
+  return `<div class="media-picker" id="mediaPicker">` + (list.map((m) => `
+    <div class="picker-item ${sel.includes(m.id) ? "active" : ""}" data-id="${esc(m.id)}" data-type="${esc(m.type)}" onclick="togglePickerItem(event)" title="${esc(m.caption || "")}">
+      ${m.type === "video" ? `<video class="thumb" src="${esc(assetUrl(m.url))}" muted></video>` : `<img class="thumb" src="${esc(assetUrl(m.url))}" loading="lazy"/>`}
+      <span class="picker-badge">${m.type === "video" ? "🎬" : "🖼"}</span>
+      ${m.category ? `<span class="picker-cat">${esc(m.category)}</span>` : ""}
+    </div>`).join("") || '<div class="empty" style="grid-column:1/-1"><div class="big">🖼</div>Médiathèque vide — importez d\'abord des médias.</div>') + `</div>`;
+}
+window.togglePickerItem = (e) => {
+  const el = e.currentTarget;
+  const id = el.dataset.id;
+  if (window.__pickerMulti) {
+    const arr = window.__pickedMedia || [];
+    const i = arr.indexOf(id);
+    if (i >= 0) arr.splice(i, 1); else arr.push(id);
+    window.__pickedMedia = arr;
+  } else {
+    window.__pickedMedia = [id];
+  }
+  document.querySelectorAll("#mediaPicker .picker-item").forEach((n) =>
+    n.classList.toggle("active", window.__pickedMedia.includes(n.dataset.id)),
+  );
+};
+
 /* ════════════════ Campagnes ════════════════ */
 $("#newCampaignBtn").addEventListener("click", () => openCampaignModal());
 
 function openCampaignModal() {
-  ensureTones().then(() => {
+  ensureTones().then(async () => {
+    await ensureMediaLoaded();
+    window.__pickedMedia = [];
+    window.__pickerMulti = true;
     openModal(`
     <h2>Nouvelle campagne</h2>
-    <div class="desc">L'agent génère les textes (Groq), choisit les vraies images de la médiathèque et assemble la vidéo.</div>
+    <div class="desc">L'agent génère les textes, choisit les vraies images de la médiathèque et assemble la vidéo.</div>
     <div class="field" style="margin-bottom:14px"><label>Nom de la campagne</label><input id="cName" placeholder="Week-end romantique — suite & spa"/></div>
     <div class="field" style="margin-bottom:14px"><label>Ton éditorial</label><div class="row" id="toneWrap">${toneChipsHtml("")}</div></div>
     <div class="grid" style="margin-bottom:14px">
       <div class="field"><label>Objectif</label><select id="cObjective"><option value="awareness">Notoriété</option><option value="OUTCOME_TRAFFIC">Trafic</option><option value="OUTCOME_ENGAGEMENT">Engagement</option><option value="OUTCOME_CONVERSIONS">Conversions</option></select></div>
       <div class="field"><label>Budget (€/jour)</label><input id="cBudget" type="number" min="1" placeholder="600"/></div>
+    </div>
+    <div class="field" style="margin-bottom:14px"><label>Visuels de la campagne (photos & vidéos — optionnel)</label>
+      <div class="desc" style="margin-bottom:8px">Sélectionnez les contenus à utiliser ; sinon l'agent choisira lui-même.</div>
+      ${mediaPickerHtml(window.__pickedMedia)}
     </div>
     <label class="check"><input type="checkbox" id="cPublish" checked/> Publier immédiatement</label>
     <label class="check"><input type="checkbox" id="cVideo"/> Générer la vidéo TikTok</label>
@@ -629,7 +679,12 @@ function openCampaignModal() {
       });
       if (!created.ok) { btn.disabled = false; btn.textContent = "Créer & lancer"; return toast(created.data?.error || "Erreur", "err"); }
       closeModal();
-      const opts = { publishNow: $("#cPublish").checked, withVideo: $("#cVideo").checked, withAds: $("#cAds").checked };
+      const opts = {
+        publishNow: $("#cPublish").checked,
+        withVideo: $("#cVideo").checked,
+        withAds: $("#cAds").checked,
+        mediaIds: window.__pickedMedia || [],
+      };
       toast(`🏨 Campagne « ${name} » créée — génération en cours…`, "ok");
       const run = await api("POST", `/campaigns/${created.data.id}/run`, opts);
       if (run.ok) {
@@ -1156,15 +1211,36 @@ async function loadBookings() {
 }
 
 /* ════════════════ Annonces ════════════════ */
-$("#adCreateBtn").addEventListener("click", async () => {
-  const name = $("#adName").value.trim();
-  const budget = $("#adBudget").value;
-  if (!name || !budget) return toast("Nom et budget requis", "err");
-  const platform = $("#adPlatform").value;
-  const r = await api("POST", platform === "meta" ? "/ads/meta" : "/ads/tiktok", { name, budget: Number(budget) });
-  toast(r.ok ? "📣 Annonce créée" : r.data?.error || "Erreur", r.ok ? "ok" : "err");
-  if (r.ok) { $("#adName").value = ""; $("#adBudget").value = ""; loadAds(); }
-});
+function openAdModal() {
+  ensureMediaLoaded().then(() => {
+    window.__pickedMedia = [];
+    window.__pickerMulti = false;
+    openModal(`
+      <h2>Nouvelle annonce</h2>
+      <div class="desc">Sélectionnez le visuel publicitaire — photo pour Meta, vidéo pour TikTok.</div>
+      <div class="grid">
+        <div class="field"><label>Nom</label><input id="adName" placeholder="Annonce été"/></div>
+        <div class="field"><label>Plateforme</label><select id="adPlatform"><option value="meta">Meta</option><option value="tiktok">TikTok</option></select></div>
+        <div class="field"><label>Budget (€/jour)</label><input id="adBudget" type="number" min="1"/></div>
+      </div>
+      <div class="field" style="margin-top:12px"><label>Visuel publicitaire</label>${mediaPickerHtml(window.__pickedMedia)}</div>
+      <div class="modal-actions">
+        <button class="btn ghost" onclick="closeModal()">Annuler</button>
+        <button class="btn primary" id="adCreate">Créer l'annonce</button>
+      </div>`);
+    $("#adCreate").addEventListener("click", async () => {
+      const name = $("#adName").value.trim();
+      const budget = $("#adBudget").value;
+      if (!name || !budget) return toast("Nom et budget requis", "err");
+      const platform = $("#adPlatform").value;
+      const mediaId = (window.__pickedMedia || [])[0];
+      const r = await api("POST", platform === "meta" ? "/ads/meta" : "/ads/tiktok", { name, budget: Number(budget), mediaId });
+      toast(r.ok ? "📣 Annonce créée" : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+      closeModal(); if (r.ok) loadAds();
+    });
+  });
+}
+$("#adCreateBtn").addEventListener("click", openAdModal);
 async function loadAds() {
   const r = await api("GET", "/ads");
   if (!r.ok) return;
@@ -1179,14 +1255,22 @@ async function loadAds() {
     return `<button class="btn primary small" onclick="resumeAd('${a.id}')">Démarrer</button>
             <button class="btn danger small" onclick="stopAd('${a.id}')">Stop</button>`;
   };
+  const thumb = (a) => {
+    if (!a.mediaUrl) return '<span class="muted">—</span>';
+    const url = assetUrl(a.mediaUrl);
+    return a.mediaType === "video"
+      ? `<video class="thumb" style="width:64px;height:44px;border-radius:8px" src="${esc(url)}" muted></video>`
+      : `<img class="thumb" style="width:64px;height:44px;border-radius:8px;object-fit:cover" src="${esc(url)}" loading="lazy"/>`;
+  };
   $("#adsTable tbody").innerHTML = (r.data || []).map((a) => `
     <tr>
+      <td>${thumb(a)}</td>
       <td style="font-weight:600;color:var(--navy-900)">${esc(a.name)}</td>
       <td><span class="badge gold">${esc(a.platform)}</span></td>
       <td>${badge(a.status)}</td>
       <td>${a.budget ? a.budget + " €" : "—"}</td>
       <td>${action(a)}</td>
-    </tr>`).join("") || '<tr><td colspan="5"><div class="empty"><div class="big">📣</div>Aucune annonce.</div></td></tr>';
+    </tr>`).join("") || '<tr><td colspan="6"><div class="empty"><div class="big">📣</div>Aucune annonce.</div></td></tr>';
 }
 window.pauseAd = async (id) => { await api("POST", `/ads/${id}/pause`, {}); toast("Annonce en pause", "ok"); loadAds(); };
 window.resumeAd = async (id) => { const r = await api("POST", `/ads/${id}/resume`, {}); toast(r.ok ? "Annonce relancée" : r.data?.error || "Erreur", r.ok ? "ok" : "err"); loadAds(); };

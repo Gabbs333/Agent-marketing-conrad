@@ -87,6 +87,14 @@ async function setAdExternalStatus(
   }
 }
 
+/** Résout un média de la médiathèque (ou null si aucun id fourni). */
+async function resolveMediaAsset(mediaId: string | undefined) {
+  if (!mediaId) return null;
+  const asset = await prisma.mediaAsset.findUnique({ where: { id: mediaId } });
+  if (!asset) throw new Error("Média introuvable dans la médiathèque");
+  return asset;
+}
+
 // ─── Schémas ──────────────────────────────────────────────────
 
 const campaignSchema = z.object({
@@ -113,6 +121,7 @@ const runSchema = z.object({
   publishNow: z.boolean().default(false),
   withVideo: z.boolean().default(false),
   withAds: z.boolean().default(false),
+  mediaIds: z.array(z.string()).optional(),
 });
 
 const textSchema = z.object({
@@ -208,6 +217,7 @@ const adSchema = z.object({
   objective: z.string().optional(),
   budget: z.number().int().positive().optional(),
   targeting: z.record(z.unknown()).optional(),
+  mediaId: z.string().optional(),
 });
 
 const leadSchema = z
@@ -741,9 +751,16 @@ export async function adminRoutes(app: FastifyInstance) {
         dailyBudget: p.data.budget,
         targeting: p.data.targeting,
       });
+      const asset = await resolveMediaAsset(p.data.mediaId);
       const creative = await metaAds.createAdCreative({
         name: `${p.data.name} — Créatif`,
         message: copy.primaryText,
+        ...(asset
+          ? {
+              mediaPath: asset.localPath ?? asset.url,
+              mediaType: asset.type === "video" ? "video" : "image",
+            }
+          : {}),
       });
       const ad = await metaAds.createAd({
         name: p.data.name,
@@ -759,6 +776,8 @@ export async function adminRoutes(app: FastifyInstance) {
           targeting: p.data.targeting ? JSON.stringify(p.data.targeting) : null,
           externalId: ad.id,
           creativeId: creative.id,
+          mediaUrl: asset?.url ?? null,
+          mediaType: asset?.type ?? null,
           status: "paused",
         },
       });
@@ -779,7 +798,15 @@ export async function adminRoutes(app: FastifyInstance) {
         name: `${p.data.name} — Ad Group`,
         budget: p.data.budget,
       });
-      const ta = await tiktokAds.createAd({ adGroupId: ag.id, name: p.data.name });
+      const asset = await resolveMediaAsset(p.data.mediaId);
+      if (asset && asset.type !== "video") {
+        return reply.code(400).send({ error: "TikTok Ads nécessite une vidéo (choisissez un média vidéo)" });
+      }
+      let videoId: string | undefined;
+      if (asset) {
+        videoId = await tiktokAds.uploadVideoCreative(asset.localPath ?? asset.url);
+      }
+      const ta = await tiktokAds.createAd({ adGroupId: ag.id, name: p.data.name, videoId });
       const record = await prisma.ad.create({
         data: {
           campaignId: p.data.campaignId ?? null,
@@ -788,6 +815,8 @@ export async function adminRoutes(app: FastifyInstance) {
           budget: p.data.budget,
           targeting: p.data.targeting ? JSON.stringify(p.data.targeting) : null,
           externalId: ta.id,
+          mediaUrl: asset?.url ?? null,
+          mediaType: asset?.type ?? null,
           status: "paused",
         },
       });

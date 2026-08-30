@@ -120,6 +120,29 @@ export async function uploadAdImage(filePath: string): Promise<string> {
   return hash;
 }
 
+/** Upload d'une vidéo sur la bibliothèque vidéo de la page → video_id pour les créatifs. */
+export async function uploadPageVideo(filePath: string): Promise<string> {
+  if (config.demoMode || !config.metaAds.accessToken) return `demo_video_${Date.now()}`;
+  const pageId = config.facebook.pageId;
+  const token = config.facebook.pageToken;
+  if (!pageId || !token) throw new Error("FB_PAGE_ID / FB_PAGE_TOKEN manquants pour uploader la vidéo");
+  const path = resolveMediaPath(filePath);
+  const form = new FormData();
+  if (path.startsWith("http")) {
+    form.append("file_url", path);
+  } else {
+    form.append("source", await fileBlob(path), basename(path));
+  }
+  const data = await httpJson(`${GRAPH_URL}/${pageId}/videos`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: form,
+  });
+  const id = String(data.id ?? "");
+  if (!id) throw new Error(`Upload vidéo page échoué : ${JSON.stringify(data).slice(0, 300)}`);
+  return id;
+}
+
 export async function createAdCreative(input: MetaCreativeInput): Promise<{ id: string }> {
   if (config.demoMode || !config.metaAds.accessToken) {
     return { id: `demo_cr_${Date.now()}` };
@@ -138,7 +161,7 @@ export async function createAdCreative(input: MetaCreativeInput): Promise<{ id: 
   };
   if (input.mediaPath) {
     if (input.mediaType === "video") {
-      linkData.video_id = resolveMediaPath(input.mediaPath);
+      linkData.video_id = await uploadPageVideo(input.mediaPath);
     } else {
       linkData.image_hash = await uploadAdImage(input.mediaPath);
     }

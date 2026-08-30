@@ -93,6 +93,15 @@ async function setAdExternalStatus(platform, externalId, status) {
         return msg;
     }
 }
+/** Résout un média de la médiathèque (ou null si aucun id fourni). */
+async function resolveMediaAsset(mediaId) {
+    if (!mediaId)
+        return null;
+    const asset = await db_1.prisma.mediaAsset.findUnique({ where: { id: mediaId } });
+    if (!asset)
+        throw new Error("Média introuvable dans la médiathèque");
+    return asset;
+}
 // ─── Schémas ──────────────────────────────────────────────────
 const campaignSchema = zod_1.z.object({
     name: zod_1.z.string().min(2),
@@ -116,6 +125,7 @@ const runSchema = zod_1.z.object({
     publishNow: zod_1.z.boolean().default(false),
     withVideo: zod_1.z.boolean().default(false),
     withAds: zod_1.z.boolean().default(false),
+    mediaIds: zod_1.z.array(zod_1.z.string()).optional(),
 });
 const textSchema = zod_1.z.object({
     platform: zod_1.z.string().min(1),
@@ -195,6 +205,7 @@ const adSchema = zod_1.z.object({
     objective: zod_1.z.string().optional(),
     budget: zod_1.z.number().int().positive().optional(),
     targeting: zod_1.z.record(zod_1.z.unknown()).optional(),
+    mediaId: zod_1.z.string().optional(),
 });
 const leadSchema = zod_1.z
     .object({
@@ -716,9 +727,16 @@ async function adminRoutes(app) {
                 dailyBudget: p.data.budget,
                 targeting: p.data.targeting,
             });
+            const asset = await resolveMediaAsset(p.data.mediaId);
             const creative = await metaAds.createAdCreative({
                 name: `${p.data.name} — Créatif`,
                 message: copy.primaryText,
+                ...(asset
+                    ? {
+                        mediaPath: asset.localPath ?? asset.url,
+                        mediaType: asset.type === "video" ? "video" : "image",
+                    }
+                    : {}),
             });
             const ad = await metaAds.createAd({
                 name: p.data.name,
@@ -734,6 +752,8 @@ async function adminRoutes(app) {
                     targeting: p.data.targeting ? JSON.stringify(p.data.targeting) : null,
                     externalId: ad.id,
                     creativeId: creative.id,
+                    mediaUrl: asset?.url ?? null,
+                    mediaType: asset?.type ?? null,
                     status: "paused",
                 },
             });
@@ -756,7 +776,15 @@ async function adminRoutes(app) {
                 name: `${p.data.name} — Ad Group`,
                 budget: p.data.budget,
             });
-            const ta = await tiktokAds.createAd({ adGroupId: ag.id, name: p.data.name });
+            const asset = await resolveMediaAsset(p.data.mediaId);
+            if (asset && asset.type !== "video") {
+                return reply.code(400).send({ error: "TikTok Ads nécessite une vidéo (choisissez un média vidéo)" });
+            }
+            let videoId;
+            if (asset) {
+                videoId = await tiktokAds.uploadVideoCreative(asset.localPath ?? asset.url);
+            }
+            const ta = await tiktokAds.createAd({ adGroupId: ag.id, name: p.data.name, videoId });
             const record = await db_1.prisma.ad.create({
                 data: {
                     campaignId: p.data.campaignId ?? null,
@@ -765,6 +793,8 @@ async function adminRoutes(app) {
                     budget: p.data.budget,
                     targeting: p.data.targeting ? JSON.stringify(p.data.targeting) : null,
                     externalId: ta.id,
+                    mediaUrl: asset?.url ?? null,
+                    mediaType: asset?.type ?? null,
                     status: "paused",
                 },
             });
