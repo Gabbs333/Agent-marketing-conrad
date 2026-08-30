@@ -135,6 +135,9 @@
   .picker-badge { position:absolute; top:5px; right:5px; background:#FFFFFFE6; border-radius:7px; padding:1px 5px; font-size:.72rem; }
   .picker-cat { position:absolute; bottom:5px; left:5px; background:#1F2A44CC; color:#fff; border-radius:6px; padding:1px 6px; font-size:.62rem; }
 
+  /* ── Aperçus (annonces & campagnes) ── */
+  .preview-frame { width:100%; height:620px; border:none; background:#fff; border-radius:10px; }
+
   /* ── Pipeline leads ── */
   .pipeline { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; }
   .pcol { background:#F8F4EA; border-radius:var(--r-md); padding:12px; min-height:180px; }
@@ -752,6 +755,7 @@ async function loadCampaigns() {
       <td>${c._count.leads}</td>
       <td>${c._count.bookings}</td>
       <td><div class="row">
+        <button class="btn ghost small" onclick="previewCampaign('${c.id}')">👁 Aperçu</button>
         <button class="btn dark small" onclick="runCampaign('${c.id}')">Lancer</button>
         <button class="btn ghost small" onclick="pauseCampaign('${c.id}')">Pause</button>
         <button class="btn ghost small" onclick="copyMessengerLink('${c.id}')">m.me</button>
@@ -1260,14 +1264,18 @@ async function loadAds() {
   const r = await api("GET", "/ads");
   if (!r.ok) return;
   const action = (a) => {
+    const preview = `<button class="btn ghost small" onclick="previewAd('${a.id}')">👁 Aperçu</button>`;
     if (a.status === "active") {
-      return `<button class="btn ghost small" onclick="pauseAd('${a.id}')">Pause</button>
+      return `${preview}
+              <button class="btn ghost small" onclick="pauseAd('${a.id}')">Pause</button>
               <button class="btn danger small" onclick="stopAd('${a.id}')">Stop</button>`;
     }
     if (a.status === "stopped") {
-      return `<button class="btn ghost small" onclick="resumeAd('${a.id}')">Relancer</button>`;
+      return `${preview}
+              <button class="btn ghost small" onclick="resumeAd('${a.id}')">Relancer</button>`;
     }
-    return `<button class="btn primary small" onclick="resumeAd('${a.id}')">Démarrer</button>
+    return `${preview}
+            <button class="btn primary small" onclick="resumeAd('${a.id}')">Démarrer</button>
             <button class="btn danger small" onclick="stopAd('${a.id}')">Stop</button>`;
   };
   const thumb = (a) => {
@@ -1290,6 +1298,73 @@ async function loadAds() {
 window.pauseAd = async (id) => { await api("POST", `/ads/${id}/pause`, {}); toast("Annonce en pause", "ok"); loadAds(); };
 window.resumeAd = async (id) => { const r = await api("POST", `/ads/${id}/resume`, {}); toast(r.ok ? "Annonce relancée" : r.data?.error || "Erreur", r.ok ? "ok" : "err"); loadAds(); };
 window.stopAd = async (id) => { if (!confirm("Stopper définitivement cette annonce ?")) return; const r = await api("POST", `/ads/${id}/stop`, {}); toast(r.ok ? "Annonce stoppée" : r.data?.error || "Erreur", r.ok ? "ok" : "err"); loadAds(); };
+
+/* Aperçu d'annonce : rendu réel Meta (fil desktop / mobile / Instagram) */
+window.previewAd = async (id) => {
+  openModal(`<h2>Aperçu de l'annonce</h2><div class="desc">Chargement du rendu Meta…</div>`);
+  const r = await api("GET", `/ads/${id}/preview`);
+  if (!r.ok) { openModal(`<h2>Aperçu de l'annonce</h2><div class="desc">${esc(r.data?.error || "Erreur")}</div>`); return; }
+  const d = r.data;
+  if (!d.previews || !d.previews.length) {
+    const media = d.mediaUrl
+      ? (d.mediaType === "video"
+          ? `<video class="thumb" style="max-height:300px;border-radius:10px" src="${esc(assetUrl(d.mediaUrl))}" controls></video>`
+          : `<img class="thumb" style="max-height:300px;border-radius:10px" src="${esc(assetUrl(d.mediaUrl))}"/>`)
+      : '<div class="empty">Aucun visuel</div>';
+    openModal(`
+      <h2>Aperçu — ${esc(d.name || "Annonce")}</h2>
+      <div class="desc">${esc(d.message || "")}</div>
+      <div style="margin-top:12px">${media}</div>
+      <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Fermer</button></div>`);
+    return;
+  }
+  const tabs = d.previews.map((p, i) =>
+    `<button type="button" class="chip ${i === 0 ? "active" : ""}" data-pvtab="${i}" onclick="switchPreviewTab(event, ${i})">${esc(p.label)}</button>`).join("");
+  const frames = d.previews.map((p, i) =>
+    `<iframe class="preview-frame" data-pvframe="${i}" style="display:${i === 0 ? "block" : "none"}" srcdoc="${esc(p.html)}"></iframe>`).join("");
+  openModal(`
+    <h2>Aperçu — ${esc(d.name || "Annonce")}</h2>
+    <div class="row" style="margin:10px 0">${tabs}</div>
+    <div style="background:#F0F2F5;border-radius:12px;padding:10px">${frames}</div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Fermer</button></div>`);
+};
+window.switchPreviewTab = (e, i) => {
+  document.querySelectorAll("[data-pvtab]").forEach((t) => t.classList.toggle("active", t.dataset.pvtab === String(i)));
+  document.querySelectorAll("[data-pvframe]").forEach((f) => (f.style.display = f.dataset.pvframe === String(i) ? "block" : "none"));
+};
+
+/* Aperçu de campagne : posts générés + annonces associées */
+window.previewCampaign = async (id) => {
+  openModal(`<h2>Aperçu de la campagne</h2><div class="desc">Chargement…</div>`);
+  const r = await api("GET", `/campaigns/${id}`);
+  if (!r.ok) { openModal(`<h2>Aperçu de la campagne</h2><div class="desc">${esc(r.data?.error || "Erreur")}</div>`); return; }
+  const c = r.data;
+  const posts = (c.posts || []).map((p) => `
+    <div class="card" style="padding:12px">
+      ${p.mediaUrl
+        ? (p.mediaType === "video"
+            ? `<video class="thumb" style="max-height:220px;border-radius:10px" src="${esc(assetUrl(p.mediaUrl))}" controls></video>`
+            : `<img class="thumb" style="max-height:220px;border-radius:10px" src="${esc(assetUrl(p.mediaUrl))}"/>`)
+        : ""}
+      <div class="muted" style="font-size:.75rem;margin:8px 0">${esc(p.platform)} · ${badge(p.status)}</div>
+      <div style="font-size:.85rem;white-space:pre-wrap">${esc(p.text || "")}</div>
+    </div>`).join("");
+  const ads = (c.ads || []).map((a) => `
+    <div class="row" style="justify-content:space-between;margin:6px 0;gap:10px">
+      <span>📣 ${esc(a.name)} <span class="badge gold">${esc(a.platform)}</span> ${badge(a.status)}</span>
+      <button class="btn ghost small" onclick="previewAd('${a.id}')">👁 Aperçu</button>
+    </div>`).join("");
+  openModal(`
+    <h2>Aperçu — ${esc(c.name)}</h2>
+    <div class="desc">${esc(c.objective)} · Budget ${c.budget ? c.budget + " €/jour" : "—"} · ${badge(c.status)}</div>
+    <div style="max-height:52vh;overflow-y:auto;margin-top:12px">
+      <h3 style="font-size:.95rem;margin-bottom:8px">Posts générés</h3>
+      <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr))">${posts || '<div class="empty">Aucun post.</div>'}</div>
+      <h3 style="font-size:.95rem;margin:16px 0 8px">Annonces</h3>
+      ${ads || '<div class="muted">Aucune annonce.</div>'}
+    </div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Fermer</button></div>`);
+};
 
 /* ════════════════ Intégrations ════════════════ */
 async function loadIntegrations() {

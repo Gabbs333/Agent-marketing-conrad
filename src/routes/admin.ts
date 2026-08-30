@@ -41,6 +41,7 @@ import {
 import { getIntegrationStatus } from "../integrations/status";
 import { setEnvValue } from "../integrations/persist";
 import { saveBuffer, resolveMediaPath, assetPath } from "../lib/files";
+import { httpJson } from "../lib/http";
 import { TONE_PRESETS } from "../content/tones";
 import { reviewPostText } from "../content/reviewer";
 import { deleteSlot,
@@ -841,6 +842,52 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   app.get("/ads", async () => prisma.ad.findMany({ orderBy: { createdAt: "desc" } }));
+
+  // Aperçu Meta d'une annonce (rendu réel fourni par l'API Marketing)
+  app.get<{ Params: { id: string } }>("/ads/:id/preview", async (req, reply) => {
+    const ad = await prisma.ad.findUnique({ where: { id: req.params.id } });
+    if (!ad) return reply.code(404).send({ error: "Annonce introuvable" });
+
+    const base = {
+      platform: ad.platform,
+      name: ad.name,
+      mediaUrl: ad.mediaUrl,
+      mediaType: ad.mediaType,
+    };
+    if (ad.platform !== "meta" || !ad.externalId || ad.externalId.startsWith("demo_")) {
+      return {
+        ...base,
+        previews: null,
+        message:
+          ad.platform !== "meta"
+            ? "Aperçu Meta indisponible pour les annonces TikTok."
+            : ad.externalId?.startsWith("demo_")
+              ? "Annonce de démonstration — aucun rendu Meta disponible."
+              : "Aucun identifiant Meta pour cette annonce.",
+      };
+    }
+
+    const formats = ["DESKTOP_FEED_STANDARD", "MOBILE_FEED_STANDARD", "INSTAGRAM_STANDARD"];
+    const previews: { format: string; label: string; html: string }[] = [];
+    const labels: Record<string, string> = {
+      DESKTOP_FEED_STANDARD: "Fil desktop",
+      MOBILE_FEED_STANDARD: "Fil mobile",
+      INSTAGRAM_STANDARD: "Instagram",
+    };
+    for (const format of formats) {
+      try {
+        const data = await httpJson(
+          `https://graph.facebook.com/v20.0/${ad.externalId}/previews?ad_format=${format}`,
+          { headers: { Authorization: `Bearer ${config.metaAds.accessToken}` } },
+        );
+        const html = data?.data?.[0]?.body;
+        if (html) previews.push({ format, label: labels[format] ?? format, html });
+      } catch (err) {
+        console.warn(`[ads] Aperçu ${format} impossible :`, (err as Error).message);
+      }
+    }
+    return { ...base, previews, message: previews.length ? undefined : "Aucun aperçu disponible." };
+  });
 
   app.post<{ Params: { id: string } }>("/ads/:id/pause", async (req, reply) => {
     const ad = await prisma.ad.findUnique({ where: { id: req.params.id } });
