@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { extname } from "node:path";
+import { unlink } from "node:fs/promises";
 import { z } from "zod";
 import { config } from "../config";
 import { prisma } from "../db";
@@ -38,7 +39,7 @@ import {
 } from "../social/facebook";
 import { getIntegrationStatus } from "../integrations/status";
 import { setEnvValue } from "../integrations/persist";
-import { saveBuffer, resolveMediaPath } from "../lib/files";
+import { saveBuffer, resolveMediaPath, assetPath } from "../lib/files";
 import { TONE_PRESETS } from "../content/tones";
 import { reviewPostText } from "../content/reviewer";
 import { deleteSlot,
@@ -545,6 +546,12 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   app.delete<{ Params: { id: string } }>("/media/:id", async (req, reply) => {
+    const asset = await prisma.mediaAsset.findUnique({ where: { id: req.params.id } });
+    if (!asset) return reply.code(404).send({ error: "Média introuvable" });
+    // Supprime aussi le fichier sur disque (ignore si déjà absent)
+    if (asset.localPath) {
+      await unlink(assetPath(asset.localPath)).catch(() => {});
+    }
     await prisma.mediaAsset.delete({ where: { id: req.params.id } });
     return { deleted: true };
   });

@@ -108,6 +108,8 @@ exports.config = {
         templateWelcome: get("WHATSAPP_TEMPLATE_WELCOME", "hotel_welcome"),
         templateFollowup: get("WHATSAPP_TEMPLATE_FOLLOWUP", "hotel_followup"),
         templateOffer: get("WHATSAPP_TEMPLATE_OFFER", "hotel_offer"),
+        templatePromo: get("WHATSAPP_TEMPLATE_PROMO", "hotel_promo"),
+        templateReview: get("WHATSAPP_TEMPLATE_REVIEW", "hotel_review"),
     },
     /** Messenger (Send API). */
     messenger: {

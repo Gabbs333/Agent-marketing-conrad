@@ -862,6 +862,7 @@ function renderMedia() {
       <div style="position:relative" onclick="openMedia('${esc(assetUrl(m.url))}','${m.type}')">
         ${m.type === "video" ? `<video class="thumb" src="${esc(assetUrl(m.url))}" muted></video>` : `<img class="thumb" src="${esc(assetUrl(m.url))}" loading="lazy"/>`}
         <button class="btn ghost small" style="position:absolute;top:8px;right:8px;background:#FFFFFFF0" onclick="event.stopPropagation();editMedia('${m.id}')">✎</button>
+        <button class="btn ghost small" style="position:absolute;top:8px;right:46px;background:#FFFFFFF0" title="Supprimer" onclick="event.stopPropagation();deleteMedia('${m.id}')">🗑</button>
       </div>
       <div class="meta">${m.category ? `<span class="badge gold">${esc(m.category)}</span>` : '<span class="badge">non catégorisé</span>'}<span>${fmtDay(m.createdAt)}</span></div>
       ${m.caption ? `<div class="muted" style="padding:0 10px 8px;font-size:.74rem">${esc(m.caption.slice(0, 64))}</div>` : ""}
@@ -891,6 +892,13 @@ window.editMedia = (id) => {
     toast(r.ok ? "✅ Métadonnées enregistrées" : r.data?.error || "Erreur", r.ok ? "ok" : "err");
     closeModal(); if (r.ok) loadMedia();
   });
+};
+
+window.deleteMedia = async (id) => {
+  if (!confirm("Supprimer définitivement ce média ?")) return;
+  const r = await api("DELETE", `/media/${id}`);
+  toast(r.ok ? "🗑 Média supprimé" : r.data?.error || "Erreur", r.ok ? "ok" : "err");
+  if (r.ok) loadMedia();
 };
 
 /* Upload avec drag & drop + catégorisation */

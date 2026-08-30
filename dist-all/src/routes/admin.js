@@ -35,6 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.adminRoutes = adminRoutes;
 const node_path_1 = require("node:path");
+const promises_1 = require("node:fs/promises");
 const zod_1 = require("zod");
 const config_1 = require("../config");
 const db_1 = require("../db");
@@ -522,6 +523,13 @@ async function adminRoutes(app) {
         }
     });
     app.delete("/media/:id", async (req, reply) => {
+        const asset = await db_1.prisma.mediaAsset.findUnique({ where: { id: req.params.id } });
+        if (!asset)
+            return reply.code(404).send({ error: "Média introuvable" });
+        // Supprime aussi le fichier sur disque (ignore si déjà absent)
+        if (asset.localPath) {
+            await (0, promises_1.unlink)((0, files_1.assetPath)(asset.localPath)).catch(() => { });
+        }
         await db_1.prisma.mediaAsset.delete({ where: { id: req.params.id } });
         return { deleted: true };
     });
