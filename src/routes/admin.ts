@@ -6,11 +6,11 @@ import { config } from "../config";
 import { prisma } from "../db";
 import {
   generateAdCopy,
-  generateAdTargeting,
   generateEmailContent,
   generatePostText,
   generateVideoScript,
 } from "../content/textGenerator";
+import { buildAiTargeting } from "../ads/targeting";
 import { generateImage } from "../content/imageGenerator";
 import { collectMediaFromSite, fetchMediaFromUrl } from "../content/mediaCollector";
 import { generateCampaignVideo } from "../content/videoGenerator";
@@ -746,12 +746,13 @@ export async function adminRoutes(app: FastifyInstance) {
         objective: p.data.objective,
         dailyBudget: p.data.budget,
       });
-      // Ciblage : manuel (dashboard) → proposé par l'IA → défaut config
+      // Ciblage : manuel (dashboard) → proposé par l'IA (granulaire, IDs
+      // résolus via Targeting Search) → défaut config
       let targeting: Record<string, unknown> | undefined = p.data.targeting;
       if (!targeting) {
         try {
           targeting =
-            (await generateAdTargeting({
+            (await buildAiTargeting({
               topic: p.data.name,
               objective: p.data.objective ?? "awareness",
             })) ?? undefined;

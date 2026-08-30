@@ -1,6 +1,7 @@
 import { config } from "./config";
 import { prisma } from "./db";
-import { generateAdCopy, generateAdTargeting, generatePostText, generateVideoScript } from "./content/textGenerator";
+import { generateAdCopy, generatePostText, generateVideoScript } from "./content/textGenerator";
+import { buildAiTargeting } from "./ads/targeting";
 import { generateImage } from "./content/imageGenerator";
 import { generateCampaignVideo } from "./content/videoGenerator";
 import { collectMediaFromSite } from "./content/mediaCollector";
@@ -241,7 +242,7 @@ export async function runCampaign(
         campaignId: mc.id,
         name: `${campaign.name} — Ad Set`,
         targeting:
-          (await generateAdTargeting({
+          (await buildAiTargeting({
             topic,
             objective: campaign.objective,
           }).catch((err) => {

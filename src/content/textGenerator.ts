@@ -165,47 +165,6 @@ export async function generateAdCopy(opts: {
   return demo ?? { headline: opts.offer, primaryText: opts.offer, cta: "Réserver" };
 }
 
-/**
- * Ciblage publicitaire proposé par l'IA pour une campagne donnée :
- * pays (codes ISO 3166-1 alpha-2) et tranche d'âge, centrés sur le
- * marché de l'hôtel (Cameroun + marchés secondaires pertinents).
- * Renvoie null si le LLM est indisponible → le backend retombe sur
- * le ciblage par défaut de la configuration.
- */
-export async function generateAdTargeting(opts: {
-  topic: string;
-  objective?: string;
-}): Promise<Record<string, unknown> | null> {
-  if (config.demoMode) return null;
-
-  const prompt = `Hôtel : ${config.hotel.name} — ${config.hotel.tagline}. Marché principal : Yaoundé, Cameroun.
-Campagne : « ${opts.topic} » (objectif : ${opts.objective ?? "awareness"}).
-Propose un ciblage géographique et démographique Meta Ads pertinent : le Cameroun en priorité, plus éventuellement 1-4 pays secondaires (diaspora, voisins) seulement si cela sert réellement la campagne.
-Réponds en JSON strict : {"countries": ["CM", ...], "age_min": 18-65, "age_max": 18-65}.`;
-  const raw = await complete(
-    prompt,
-    "Tu es un expert média planning pour un hôtel de luxe en Afrique centrale. Réponds uniquement en JSON valide.",
-  );
-  const parsed = parseJson<{ countries?: unknown; age_min?: unknown; age_max?: unknown }>(raw);
-  if (!parsed) return null;
-
-  const countries = (Array.isArray(parsed.countries) ? parsed.countries : [])
-    .map(String)
-    .map((c) => c.trim().toUpperCase())
-    .filter((c) => /^[A-Z]{2}$/.test(c))
-    .slice(0, 25);
-  if (countries.length === 0) return null;
-
-  const ageMin = Math.max(18, Math.min(65, Number(parsed.age_min) || config.adsTargeting.ageMin));
-  const ageMax = Math.max(ageMin, Math.min(65, Number(parsed.age_max) || config.adsTargeting.ageMax));
-
-  return {
-    geo_locations: { countries },
-    age_min: ageMin,
-    age_max: ageMax,
-  };
-}
-
 function demoEmail(stage: string, leadName: string): EmailContent {
   const hotel = config.hotel.name;
   const name = leadName ? ` ${leadName}` : "";
