@@ -748,7 +748,6 @@ export async function adminRoutes(app: FastifyInstance) {
       const adset = await metaAds.createAdSet({
         campaignId: mc.id,
         name: `${p.data.name} — Ad Set`,
-        dailyBudget: p.data.budget,
         targeting: p.data.targeting,
       });
       const asset = await resolveMediaAsset(p.data.mediaId);

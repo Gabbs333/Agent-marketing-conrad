@@ -28,6 +28,8 @@ export interface MetaAdSetInput {
   targeting?: Record<string, unknown>;
   optimizationGoal?: string;
   billingEvent?: string;
+  bidStrategy?: string;
+  bidAmount?: number;
 }
 
 export interface MetaCreativeInput {
@@ -64,6 +66,7 @@ export async function createCampaign(input: MetaCampaignInput): Promise<{ id: st
     status: input.status ?? "PAUSED",
   };
   if (input.dailyBudget) body.daily_budget = String(input.dailyBudget);
+  else body.is_adset_budget_sharing_enabled = "false";
   if (input.startDate) body.start_time = input.startDate.toISOString();
   if (input.endDate) body.stop_time = input.endDate.toISOString();
 
@@ -89,9 +92,15 @@ export async function createAdSet(input: MetaAdSetInput): Promise<{ id: string }
     campaign_id: input.campaignId,
     billing_event: input.billingEvent ?? "IMPRESSIONS",
     optimization_goal: input.optimizationGoal ?? "REACH",
+    // Compte avec stratégie d'enchère TARGET_COST par défaut : un bid_amount
+    // est obligatoire (LOWEST_COST_WITHOUT_CAP est ignoré par l'API dans ce cas).
+    bid_strategy: input.bidStrategy ?? "TARGET_COST",
+    bid_amount: String(input.bidAmount ?? 500),
     targeting: JSON.stringify(targeting),
     status: "PAUSED",
   };
+  // ⚠️ Pas de daily_budget ici si la campagne porte déjà un budget
+  // (Advantage Campaign Budget) : Meta rejette la double définition.
   if (input.dailyBudget) body.daily_budget = String(input.dailyBudget);
 
   const data = await httpJson(`${GRAPH_URL}/${account}/adsets`, {

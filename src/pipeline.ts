@@ -240,7 +240,6 @@ export async function runCampaign(
       const adset = await metaAds.createAdSet({
         campaignId: mc.id,
         name: `${campaign.name} — Ad Set`,
-        dailyBudget: campaign.budget,
       });
       const creative = await metaAds.createAdCreative({
         name: `${campaign.name} — Créatif`,
